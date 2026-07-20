@@ -1,0 +1,251 @@
+<mujoco model="cr3_craft_click_mouse">
+  <compiler angle="radian"/>
+  <option timestep="0.002"/>
+  <default>
+    <joint armature="0.01" damping="0.1"/>
+  </default>
+
+  <asset>
+    <!-- ===== CR3 arm meshes ===== -->
+    <mesh name="base_link" file="cr3_craft/models/meshes/base_link.STL"/>
+    <mesh name="J1" file="cr3_craft/models/meshes/J1.STL"/>
+    <mesh name="J2" file="cr3_craft/models/meshes/J2.STL"/>
+    <mesh name="J3" file="cr3_craft/models/meshes/J3.STL"/>
+    <mesh name="J4" file="cr3_craft/models/meshes/J4.STL"/>
+    <mesh name="J5" file="cr3_craft/models/meshes/J5.STL"/>
+    <mesh name="J6" file="cr3_craft/models/meshes/J6.STL"/>
+
+    <!-- ===== CRAFT hand meshes ===== -->
+    <mesh name="base" file="cr3_craft/models/meshes/base.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index1" file="cr3_craft/models/meshes/index1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index2" file="cr3_craft/models/meshes/index2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index3" file="cr3_craft/models/meshes/index3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index4" file="cr3_craft/models/meshes/index4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle1" file="cr3_craft/models/meshes/middle1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle2" file="cr3_craft/models/meshes/middle2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle3" file="cr3_craft/models/meshes/middle3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle4" file="cr3_craft/models/meshes/middle4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring1" file="cr3_craft/models/meshes/ring1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring2" file="cr3_craft/models/meshes/ring2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring3" file="cr3_craft/models/meshes/ring3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring4" file="cr3_craft/models/meshes/ring4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky1" file="cr3_craft/models/meshes/pinky1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky2" file="cr3_craft/models/meshes/pinky2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky3" file="cr3_craft/models/meshes/pinky3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky4" file="cr3_craft/models/meshes/pinky4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumbmcp" file="cr3_craft/models/meshes/ThumbMCP.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb2" file="cr3_craft/models/meshes/thumb2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb3" file="cr3_craft/models/meshes/thumb3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb4" file="cr3_craft/models/meshes/thumb4.stl" scale="0.001 0.001 0.001"/>
+
+    <!-- ===== Table mesh ===== -->
+    <mesh name="table_mesh" file="cr3_craft/models/meshes/table_low.STL"/>
+
+    <!-- ===== Mouse and display assets from includes ===== -->
+    <!-- mouse_nolight.xml assets -->
+    <material name="original-5_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.3176470588235294 0.3176470588235294 0.3176470588235294 1"/>
+    <mesh name="original-5" file="mouse/textured_objs_thickness/original-5/original-5.obj" scale="0.12 0.12 0.12"/>
+    <material name="original-2_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.13333333333333333 0.13333333333333333 0.13333333333333333 1"/>
+    <mesh name="original-2" file="mouse/textured_objs_thickness/original-2/original-2.obj" scale="0.12 0.12 0.12"/>
+    <material name="original-1_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.3176470588235294 0.3176470588235294 0.3176470588235294 1"/>
+    <mesh name="original-1" file="mouse/textured_objs_thickness/original-1/original-1.obj" scale="0.12 0.12 0.12"/>
+    <material name="original-4_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.7529411764705882 0.7529411764705882 0.7529411764705882 1"/>
+    <mesh name="original-4" file="mouse/textured_objs_thickness/original-4/original-4.obj" scale="0.12 0.12 0.12"/>
+    <material name="original-3_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.7529411764705882 0.7529411764705882 0.7529411764705882 1"/>
+    <mesh name="original-3" file="mouse/textured_objs_thickness/original-3/original-3.obj" scale="0.12 0.12 0.12"/>
+
+    <!-- display.xml assets (key meshes) -->
+    <material name="display_new-0_material-0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_new-0" file="display/textured_objs_thickness/new-0/new-0.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-15_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-15" file="display/textured_objs_thickness/original-15/original-15.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-14_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-14" file="display/textured_objs_thickness/original-14/original-14.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-4_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-4" file="display/textured_objs_thickness/original-4/original-4.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-3_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-3" file="display/textured_objs_thickness/original-3/original-3.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_new-1_material-0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_new-1" file="display/textured_objs_thickness/new-1/new-1.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-5_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-5" file="display/textured_objs_thickness/original-5/original-5.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-6_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-6" file="display/textured_objs_thickness/original-6/original-6.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-8_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-8" file="display/textured_objs_thickness/original-8/original-8.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-9_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-9" file="display/textured_objs_thickness/original-9/original-9.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-10_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-10" file="display/textured_objs_thickness/original-10/original-10.obj" scale="0.4 0.4 0.4"/>
+    <material name="display_original-11_material_0_0" specular="0.06666666666666667" shininess="0.03" rgba="0.11372549019607843 0.11372549019607843 0.11372549019607843 1"/>
+    <mesh name="display_original-11" file="display/textured_objs_thickness/original-11/original-11.obj" scale="0.4 0.4 0.4"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="3 3 0.01" rgba="0.3 0.3 0.3 1"/>
+
+    <!-- ===== Mouse object ===== -->
+    <body name="link_3" pos="0.6 0.0 0.05" quat="0.5 0.5 0.5 0.5">
+      <freejoint name="mouse_root"/>
+      <geom name="mouse" pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="original-2" material="original-2_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="original-1" material="original-1_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="original-2" material="original-2_material_0_0" contype="1" conaffinity="14" solimp="0.9 0.95 0.001" friction="0.15 0.01 0.0001" solref="0.01 1" group="3"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="original-1" material="original-1_material_0_0" contype="1" conaffinity="14" solimp="0.9 0.95 0.001" friction="0.15 0.01 0.0001" solref="0.01 1" group="3"/>
+      <body name="link_0" pos="0.01946052337734874 0.0173107458098297 0.05022304669571423">
+        <joint name="mouse_joint_0" pos="0 0 0" axis="-0.2207561414986594 -0.935076664159537 -0.27730553210294306" range="-0.008 0.008" type="slide" stiffness="1000" springref="0" damping="100"/>
+        <geom pos="-0.01946052337734874 -0.0173107458098297 -0.05022304669571423" quat="1 0 0 0" type="mesh" mesh="original-3" material="original-3_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.01946052337734874 -0.0173107458098297 -0.05022304669571423" quat="1 0 0 0" type="mesh" mesh="original-3" material="original-3_material_0_0" contype="1" conaffinity="14" solimp="0.9 0.95 0.001" friction="0.15 0.01 0.0001" solref="0.01 1" group="3"/>
+      </body>
+      <body name="link_1" pos="-0.018636053511937044 0.017034204392511798 0.05214668552679713">
+        <joint name="mouse_joint_1" pos="0 0 0" axis="0.2207537368040033 -0.9350768739328008 -0.27730673905105435" range="-0.008 0.008" type="slide" stiffness="1000" springref="0" damping="100"/>
+        <geom pos="0.018636053511937044 -0.017034204392511798 -0.05214668552679713" quat="1 0 0 0" type="mesh" mesh="original-4" material="original-4_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="0.018636053511937044 -0.017034204392511798 -0.05214668552679713" quat="1 0 0 0" type="mesh" mesh="original-4" material="original-4_material_0_0" contype="1" conaffinity="14" solimp="0.9 0.95 0.001" friction="0.15 0.01 0.0001" solref="0.01 1" group="3"/>
+      </body>
+      <body name="link_2" pos="0.0 0.005000000000000001 0.050600000000000006">
+        <geom pos="0.0 -0.005000000000000001 -0.050600000000000006" quat="1 0 0 0" type="mesh" mesh="original-5" material="original-5_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="0.0 -0.005000000000000001 -0.050600000000000006" quat="1 0 0 0" type="mesh" mesh="original-5" material="original-5_material_0_0" contype="1" conaffinity="14" solimp="0.9 0.95 0.001" friction="0.15 0.01 0.0001" solref="0.01 1" group="3"/>
+      </body>
+    </body>
+
+    <!-- ===== Display / monitor ===== -->
+    <body name="display_link_1" pos="0.2 0.3 1.16" quat="0.4999999999999998 0.5 -0.5000000000000002 -0.5">
+      <freejoint name="display_root"/>
+      <geom name="display_geom" pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="display_original-15" material="display_original-15_material_0_0" density="100" contype="0" conaffinity="0" group="2"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="display_original-14" material="display_original-14_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="display_original-15" material="display_original-15_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+      <geom pos="0.0 0.0 0.0" quat="1 0 0 0" type="mesh" mesh="display_original-14" material="display_original-14_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+      <body name="display_link_0" pos="0.009387200000000063 -0.015523215990950332 -0.007618436310905705">
+        <joint name="joint_0" pos="0 0 0" axis="-1 0 0" range="-0.0 0.4363323129985824" type="hinge"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-4" material="display_original-4_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-3" material="display_original-3_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_new-1" material="display_new-1_material-0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-5" material="display_original-5_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-6" material="display_original-6_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-8" material="display_original-8_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-9" material="display_original-9_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-10" material="display_original-10_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-11" material="display_original-11_material_0_0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_new-0" material="display_new-0_material-0" density="0" contype="0" conaffinity="0" group="2"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-4" material="display_original-4_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-3" material="display_original-3_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_new-1" material="display_new-1_material-0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-5" material="display_original-5_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-6" material="display_original-6_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-8" material="display_original-8_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-9" material="display_original-9_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-10" material="display_original-10_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+        <geom pos="-0.009387200000000063 0.015523215990950332 0.007618436310905705" quat="1 0 0 0" type="mesh" mesh="display_original-11" material="display_original-11_material_0_0" contype="1" conaffinity="14" friction="0.9 0.2 0.2" solref="0.001 2" group="3"/>
+      </body>
+    </body>
+
+    <!-- ===== Table ===== -->
+    <body name="table" pos="-0.15 0 0">
+      <geom name="table_collision" type="box" size="0.4 0.8 0.03" pos="0 0 0.89" friction="1 0.005 0.0001" group="3"/>
+      <geom name="table_visual" type="box" size="0.4 0.8 0.03" pos="0 0 0.89" contype="0" conaffinity="0" group="1" rgba="0.7 0.7 0.7 1"/>
+      <site name="table_top" pos="0 0 0.92" size="0.002 0.002 0.002" rgba="0 0 0 0"/>
+      <geom pos="0.32 0.72 0.43" type="cylinder" size="0.04 0.43" contype="0" conaffinity="0" group="1" rgba="0.5 0.5 0.5 1"/>
+      <geom pos="0.32 -0.72 0.43" type="cylinder" size="0.04 0.43" contype="0" conaffinity="0" group="1" rgba="0.5 0.5 0.5 1"/>
+      <geom pos="-0.32 0.72 0.43" type="cylinder" size="0.04 0.43" contype="0" conaffinity="0" group="1" rgba="0.5 0.5 0.5 1"/>
+      <geom pos="-0.32 -0.72 0.43" type="cylinder" size="0.04 0.43" contype="0" conaffinity="0" group="1" rgba="0.5 0.5 0.5 1"/>
+    </body>
+
+    <!-- ===== Mousepad ===== -->
+    <body name="mousepad" pos="0 0 0">
+      <geom name="mousepad" type="cylinder" size="0.15 0.001" rgba="0.4 0.0 0.5 1" contype="0" conaffinity="0" group="1"/>
+    </body>
+
+    <!-- ===== Target marker ===== -->
+    <body name="target_marker" pos="0.18 0.18 1.12">
+      <site name="reach_target" type="sphere" size="0.025" rgba="0.2 0.95 0.3 1"/>
+      <geom name="target_x" type="capsule" size="0.003" fromto="-0.03 0 0 0.03 0 0" rgba="0.9 0.1 0.1 0.9" contype="0" conaffinity="0"/>
+      <geom name="target_y" type="capsule" size="0.003" fromto="0 -0.03 0 0 0.03 0" rgba="0.1 0.9 0.1 0.9" contype="0" conaffinity="0"/>
+      <geom name="target_z" type="capsule" size="0.003" fromto="0 0 -0.03 0 0 0.03" rgba="0.1 0.3 0.9 0.9" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- ===== CR3 + CRAFT Robot ===== -->
+    <body pos="0 0.3 0.72">
+      <include file="cr3_craft/models/cr3_robot_hand_body.xml"/>
+    </body>
+
+    <!-- ===== Lights and cameras ===== -->
+    <light directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" pos="0 0 3" dir="0 0 -1"/>
+    <camera name="front" pos="1.3 0.0 1.6" quat="0.5963678 0.3799282 0.3799282 0.5963678" fovy="45"/>
+    <camera name="handcam_rgb" pos="1.10 0.20 1.35" xyaxes="-0.35 0.94 0 -0.45 -0.17 0.88"/>
+    <camera name="overview" pos="0.8 -0.5 2.0" xyaxes="0.7 0.7 0 -0.35 0.35 0.87" fovy="60"/>
+    <camera name="closeup" pos="0.55 0.25 0.97" xyaxes="-0.4 0.9 0 -0.55 -0.25 0.8" fovy="35"/>
+  </worldbody>
+
+  <sensor>
+    <framepos name="mouse_pos" objtype="geom" objname="mouse"/>
+    <framequat name="mouse_quat" objtype="geom" objname="mouse"/>
+    <jointpos name="mouse_joint0_pos" joint="mouse_joint_0"/>
+    <jointpos name="mouse_joint1_pos" joint="mouse_joint_1"/>
+  </sensor>
+
+  <actuator>
+    <!-- CR3 arm actuators (from reach_debug, stabilized gains) -->
+    <position name="arm_joint1" joint="joint1" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint2" joint="joint2" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint3" joint="joint3" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-2.7039 2.7039"/>
+    <position name="arm_joint4" joint="joint4" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint5" joint="joint5" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint6" joint="joint6" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <!-- CRAFT hand actuators -->
+    <position name="h_index_1" joint="index_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_2" joint="index_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_3" joint="index_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_4" joint="index_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_1" joint="middle_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_2" joint="middle_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_3" joint="middle_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_4" joint="middle_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_1" joint="ring_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_2" joint="ring_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_3" joint="ring_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_4" joint="ring_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_1" joint="pinky_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_2" joint="pinky_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_3" joint="pinky_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_4" joint="pinky_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_mcp" joint="thumb_mcp" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_2" joint="thumb_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_3" joint="thumb_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_4" joint="thumb_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+  </actuator>
+
+  <equality>
+    <joint joint1="index_3" joint2="index_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="middle_3" joint2="middle_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="ring_3" joint2="ring_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="pinky_3" joint2="pinky_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="thumb_3" joint2="thumb_4" polycoef="0 1 0 0 0"/>
+  </equality>
+
+  <contact>
+    <exclude body1="base" body2="index1"/>
+    <exclude body1="base" body2="index2"/>
+    <exclude body1="index1" body2="index2"/>
+    <exclude body1="index2" body2="index3"/>
+    <exclude body1="index3" body2="index4"/>
+    <exclude body1="base" body2="middle1"/>
+    <exclude body1="base" body2="middle2"/>
+    <exclude body1="middle1" body2="middle2"/>
+    <exclude body1="middle2" body2="middle3"/>
+    <exclude body1="middle3" body2="middle4"/>
+    <exclude body1="base" body2="ring1"/>
+    <exclude body1="base" body2="ring2"/>
+    <exclude body1="ring1" body2="ring2"/>
+    <exclude body1="ring2" body2="ring3"/>
+    <exclude body1="ring3" body2="ring4"/>
+    <exclude body1="base" body2="pinky1"/>
+    <exclude body1="base" body2="pinky2"/>
+    <exclude body1="pinky1" body2="pinky2"/>
+    <exclude body1="pinky2" body2="pinky3"/>
+    <exclude body1="pinky3" body2="pinky4"/>
+    <exclude body1="base" body2="thumbmcp"/>
+    <exclude body1="base" body2="thumb2"/>
+    <exclude body1="thumbmcp" body2="thumb2"/>
+    <exclude body1="thumb2" body2="thumb3"/>
+    <exclude body1="thumb3" body2="thumb4"/>
+  </contact>
+</mujoco>

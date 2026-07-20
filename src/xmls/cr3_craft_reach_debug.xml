@@ -1,0 +1,123 @@
+<mujoco model="cr3_craft_reach_debug">
+  <compiler angle="radian" meshdir="cr3_craft/models/meshes"/>
+  <option timestep="0.002"/>
+  <default>
+    <joint armature="0.01" damping="0.1"/>
+  </default>
+
+  <asset>
+    <mesh name="base_link" file="base_link.STL"/>
+    <mesh name="J1" file="J1.STL"/>
+    <mesh name="J2" file="J2.STL"/>
+    <mesh name="J3" file="J3.STL"/>
+    <mesh name="J4" file="J4.STL"/>
+    <mesh name="J5" file="J5.STL"/>
+    <mesh name="J6" file="J6.STL"/>
+    <mesh name="table_mesh" file="table_low.STL"/>
+    <mesh name="base" file="base.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index1" file="index1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index2" file="index2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index3" file="index3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="index4" file="index4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle1" file="middle1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle2" file="middle2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle3" file="middle3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="middle4" file="middle4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring1" file="ring1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring2" file="ring2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring3" file="ring3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="ring4" file="ring4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky1" file="pinky1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky2" file="pinky2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky3" file="pinky3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="pinky4" file="pinky4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumbmcp" file="ThumbMCP.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb2" file="thumb2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb3" file="thumb3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thumb4" file="thumb4.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="3 3 0.01" rgba="0.3 0.3 0.3 1"/>
+    <light directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" pos="0 0 3" dir="0 0 -1"/>
+    <camera name="front" pos="1.85 -0.15 1.35" xyaxes="0.18 0.98 0 -0.38 0.07 0.92"/>
+    <camera name="handcam_rgb" pos="1.10 0.20 1.35" xyaxes="-0.35 0.94 0 -0.45 -0.17 0.88"/>
+    <body name="table" pos="0.15 -0.25 0" quat="0.5 0.5 0.5 0.5">
+      <geom name="table_visual" type="mesh" mesh="table_mesh" rgba="0.7 0.7 0.7 1"/>
+    </body>
+    <body name="target_marker" pos="0.18 0.18 1.12">
+      <site name="reach_target" type="sphere" size="0.025" rgba="0.2 0.95 0.3 1"/>
+      <geom name="target_x" type="capsule" size="0.003" fromto="-0.03 0 0 0.03 0 0" rgba="0.9 0.1 0.1 0.9" contype="0" conaffinity="0"/>
+      <geom name="target_y" type="capsule" size="0.003" fromto="0 -0.03 0 0 0.03 0" rgba="0.1 0.9 0.1 0.9" contype="0" conaffinity="0"/>
+      <geom name="target_z" type="capsule" size="0.003" fromto="0 0 -0.03 0 0 0.03" rgba="0.1 0.3 0.9 0.9" contype="0" conaffinity="0"/>
+    </body>
+    <body pos="0 0.3 0.72">
+      <include file="cr3_craft/models/cr3_robot_hand_body.xml"/>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1="base" body2="index1"/>
+    <exclude body1="base" body2="index2"/>
+    <exclude body1="index1" body2="index2"/>
+    <exclude body1="index2" body2="index3"/>
+    <exclude body1="index3" body2="index4"/>
+    <exclude body1="base" body2="middle1"/>
+    <exclude body1="base" body2="middle2"/>
+    <exclude body1="middle1" body2="middle2"/>
+    <exclude body1="middle2" body2="middle3"/>
+    <exclude body1="middle3" body2="middle4"/>
+    <exclude body1="base" body2="ring1"/>
+    <exclude body1="base" body2="ring2"/>
+    <exclude body1="ring1" body2="ring2"/>
+    <exclude body1="ring2" body2="ring3"/>
+    <exclude body1="ring3" body2="ring4"/>
+    <exclude body1="base" body2="pinky1"/>
+    <exclude body1="base" body2="pinky2"/>
+    <exclude body1="pinky1" body2="pinky2"/>
+    <exclude body1="pinky2" body2="pinky3"/>
+    <exclude body1="pinky3" body2="pinky4"/>
+    <exclude body1="base" body2="thumbmcp"/>
+    <exclude body1="base" body2="thumb2"/>
+    <exclude body1="thumbmcp" body2="thumb2"/>
+    <exclude body1="thumb2" body2="thumb3"/>
+    <exclude body1="thumb3" body2="thumb4"/>
+  </contact>
+
+  <equality>
+    <joint joint1="index_3" joint2="index_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="middle_3" joint2="middle_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="ring_3" joint2="ring_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="pinky_3" joint2="pinky_4" polycoef="0 1 0 0 0"/>
+    <joint joint1="thumb_3" joint2="thumb_4" polycoef="0 1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <position name="arm_joint1" joint="joint1" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint2" joint="joint2" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint3" joint="joint3" kp="120" kv="60" forcerange="-80 80" ctrllimited="true" ctrlrange="-2.7039 2.7039"/>
+    <position name="arm_joint4" joint="joint4" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint5" joint="joint5" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="arm_joint6" joint="joint6" kp="80" kv="30" forcerange="-40 40" ctrllimited="true" ctrlrange="-6.28 6.28"/>
+    <position name="h_index_1" joint="index_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_2" joint="index_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_3" joint="index_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_index_4" joint="index_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_1" joint="middle_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_2" joint="middle_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_3" joint="middle_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_middle_4" joint="middle_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_1" joint="ring_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_2" joint="ring_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_3" joint="ring_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_ring_4" joint="ring_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_1" joint="pinky_1" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_2" joint="pinky_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_3" joint="pinky_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_pinky_4" joint="pinky_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_mcp" joint="thumb_mcp" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_2" joint="thumb_2" kp="80" kv="12" forcerange="-5 5" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_3" joint="thumb_3" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+    <position name="h_thumb_4" joint="thumb_4" kp="50" kv="8" forcerange="-3 3" ctrllimited="true" ctrlrange="-3 3"/>
+  </actuator>
+</mujoco>
