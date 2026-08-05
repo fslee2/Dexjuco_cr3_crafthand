@@ -47,9 +47,9 @@ Modes
 
 WSL usage
 ---------
-  cd /mnt/e/material_for_uci_experiment/DexJoCo-CRAFT-Teleop
+  cd <DEXJOCO_ROOT>
   source ~/.venv-hamer/bin/activate
-  export PYTHONPATH=/mnt/e/material_for_uci_experiment/DexJoCo-CRAFT-Teleop/dexjoco
+  export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
 
   # Interactive with viewer
   python scripts/keyboard_cr3_craft_click_mouse_shell.py --viewer

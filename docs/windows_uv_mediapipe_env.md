@@ -13,7 +13,7 @@ It intentionally does not install HaMeR, PyTorch, pytorch3d, ViTPose, or trainin
 From PowerShell:
 
 ```powershell
-cd E:\material_for_uci_experiment\DexJoCo-CRAFT-Teleop
+cd <DEXJOCO_ROOT>
 .\scripts\setup_windows_uv_mediapipe.ps1
 ```
 
@@ -32,14 +32,14 @@ Python version:
 ## Run Current Validation Script
 
 ```powershell
-cd E:\material_for_uci_experiment\DexJoCo-CRAFT-Teleop
+cd <DEXJOCO_ROOT>
 .\scripts\run_mediapipe_cr3_windows_uv.ps1 -CameraId 0
 ```
 
 Equivalent raw command:
 
 ```powershell
-$env:PYTHONPATH="E:\material_for_uci_experiment\DexJoCo-CRAFT-Teleop\dexjoco"
+$env:PYTHONPATH="<DEXJOCO_ROOT>\dexjoco"
 $env:MUJOCO_GL="glfw"
 
 .\.venv-mediapipe-win\Scripts\python.exe scripts\mediapipe_cr3_craft_click_mouse_shell.py `
@@ -96,7 +96,7 @@ If the key controls do not respond, click the OpenCV preview/key window first.
 If MediaPipe cannot find the hand landmarker task, confirm this file exists:
 
 ```text
-E:\material_for_uci_experiment\DexJoCo-CRAFT-Teleop\hand_landmarker.task
+<DEXJOCO_ROOT>\hand_landmarker.task
 ```
 
 ## Optional: Dual-Camera Test

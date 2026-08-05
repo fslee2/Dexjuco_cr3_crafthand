@@ -1,11 +1,68 @@
 __pycache__/
 *.py[cod]
 .venv*/
+venv/
+env/
+.env
+.env.*
 .pytest_cache/
+
+# Generated experiment outputs and runtime logs
 outputs/
-*.mp4
-*.avi
-*.mov
+output/
+runs/
+logs/
+checkpoints/
+weights/
+artifacts/
+recordings/
+captures/
 *.log
 MUJOCO_LOG.TXT
 
+# Large media and sensor recordings
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.wav
+*.bag
+
+# Model weights and serialized datasets
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.safetensors
+*.task
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Archives and CAD / 3D design sources
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.sldprt
+*.sldasm
+*.step
+*.stp
+*.iges
+*.igs
+*.3mf
+*.stl
+*.blend
+
+# Local tools and editor metadata
+.vscode/
+.idea/
+*.code-workspace
+Thumbs.db
+Desktop.ini

@@ -84,8 +84,8 @@ These are explicitly out of scope for this first pass.
 ## 6. How to Run Synthetic Smoke Test
 
 ```bash
-cd /path/to/DexJoCo-CRAFT-Teleop
-export PYTHONPATH=/path/to/DexJoCo-CRAFT-Teleop/dexjoco
+cd <DEXJOCO_ROOT>
+export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
 export MUJOCO_GL=egl
 
 # Compile-check all new Python files

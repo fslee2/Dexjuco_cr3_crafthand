@@ -170,9 +170,9 @@ obs = {
 **命令**:
 
 ```bash
-cd /mnt/e/material_for_uci_experiment/DexJoCo-CRAFT-Teleop
+cd <DEXJOCO_ROOT>
 source ~/.venv-hamer/bin/activate
-export PYTHONPATH=/mnt/e/material_for_uci_experiment/DexJoCo-CRAFT-Teleop/dexjoco
+export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
 export MUJOCO_GL=egl
 python -c '...'  # 完整脚本见审计说明
 ```
