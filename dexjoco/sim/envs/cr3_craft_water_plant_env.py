@@ -45,7 +45,7 @@ _TABLE_LEG_NAMES = (
 _N_POLICY_HAND = len(ALLEGRO_JOINT_NAMES)
 
 
-class PandaWaterPlantGymEnv(MujocoGymEnv):
+class Cr3CraftWaterPlantEnv(MujocoGymEnv):
     def __init__(
         self,
         render_mode: Literal["rgb_array", "human", "none"],

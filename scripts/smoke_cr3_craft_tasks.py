@@ -9,11 +9,11 @@ import numpy as np
 
 
 TASKS = (
-    ("hammer_nail", "panda_hammer_nail_env", "PandaHammerNailGymEnv", {"render_mode": "rgb_array", "randomize": False}),
-    ("pick_bucket", "panda_pick_bucket_env", "PandaPickBucketGymEnv", {"render_mode": "rgb_array", "randomize": False}),
-    ("pinch_tongs", "panda_pinch_tongs_env", "PandaPinchTongsGymEnv", {"render_mode": "rgb_array", "randomize": False}),
-    ("water_plant", "panda_water_plant_env", "PandaWaterPlantGymEnv", {"render_mode": "rgb_array", "randomize": False}),
-    ("fold_glasses", "panda_fold_glasses_env", "PandaFoldGlassesGymEnv", {"render_mode": "rgb_array", "randomize": False}),
+    ("hammer_nail", "cr3_craft_hammer_nail_env", "Cr3CraftHammerNailEnv", {"render_mode": "rgb_array", "randomize": False}),
+    ("pick_bucket", "cr3_craft_pick_bucket_env", "Cr3CraftPickBucketEnv", {"render_mode": "rgb_array", "randomize": False}),
+    ("pinch_tongs", "cr3_craft_pinch_tongs_env", "Cr3CraftPinchTongsEnv", {"render_mode": "rgb_array", "randomize": False}),
+    ("water_plant", "cr3_craft_water_plant_env", "Cr3CraftWaterPlantEnv", {"render_mode": "rgb_array", "randomize": False}),
+    ("fold_glasses", "cr3_craft_fold_glasses_env", "Cr3CraftFoldGlassesEnv", {"render_mode": "rgb_array", "randomize": False}),
 )
 
 

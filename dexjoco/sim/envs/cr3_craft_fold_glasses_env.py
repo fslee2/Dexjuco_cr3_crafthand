@@ -15,23 +15,16 @@ from .hand_models import HandType, SingleArmHand, model_for_hand
 from .cr3_craft_task_compat import configure_cr3_task_env
 
 _HERE = Path(__file__).parent
-_XML_PATH = _HERE / "xmls" / "arena_arm_hand_bucket_pick.xml"
+_XML_PATH = _HERE / "xmls" / "arena_arm_hand_glass_v2.xml"
 _PANDA_HOME = np.asarray((0, -0.785, 0, -2.35, 0, 1.57, np.pi / 4))  # Origin
-_ALLEGRO_HOME = np.asarray(
-    (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.263, 0, 0, 0), dtype=np.float32
-)
+_ALLEGRO_HOME = np.asarray((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.263, 0, 0, 0), dtype=np.float32)
 _CARTESIAN_BOUNDS = np.asarray([[-0.8, -0.8, -0.8], [0.8, 0.8, 0.8]])
-_SAMPLING_BOUNDS = np.asarray(
-    [[-0.20, -0.2], [-0.15, -0.25]]
-)  # x:[-0.20,-0.15], y:[-0.2,-0.25]
-_FOOD_SAMPLING_BOUNDS = np.array([[-0.35, 0.15], [-0.3, 0.20]])
+_SAMPLING_BOUNDS = np.asarray([[-0.4, -0.225], [-0.35, -0.175]])
+_BOX_SAMPLING_BOUNDS = np.array([[-0.275, 0.25], [-0.225, 0.3]])
 _YAW_PERTURB_BOUNDS = np.array([-10, 10])
-
-# Number of Allegro joints expected
 _N_ALLEGRO = 16
 
-
-class PandaPickBucketGymEnv(MujocoGymEnv):
+class Cr3CraftFoldGlassesEnv(MujocoGymEnv):
     metadata = {"render_modes": ["rgb_array", "human"]}
 
     def __init__(
@@ -54,7 +47,7 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         self.hz = 30
         self._action_scale = action_scale
         self.randomize = randomize
-        self._randomize_dynamics = randomize_dynamics
+        self.randomize_dynamics = randomize_dynamics
 
         model = None if hand == "craft" else model_for_hand(_XML_PATH, hand)
         super().__init__(
@@ -79,14 +72,14 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         self.render_mode = render_mode
         self.image_obs = image_obs
         self.env_step = 0
-        self.intervened = True
-
+        self.reset_trigger = False
+        self._success_trigger_count = 0
+        # Panda caches
         if hand == "craft":
             configure_cr3_task_env(self)
         else:
             self._panda_dof_ids = np.asarray([self._model.joint(f"joint{i}").id for i in range(1, 8)])
             self._panda_ctrl_ids = np.asarray([self._model.actuator(f"actuator{i}").id for i in range(1, 8)])
-            self._panda_mocap_id = int(self._model.body("target").mocapid[0])
             self._site_id = self._model.site("attachment_site").id
             self._hand = SingleArmHand(self._model, hand)
 
@@ -94,18 +87,10 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         state_space = spaces.Dict(
             {
                 "tcp_pose": spaces.Box(-np.inf, np.inf, shape=(7,)),
-                "gripper_pose": spaces.Box(
-                    -np.inf, np.inf, shape=(15,), dtype=np.float32
-                ),
-                "bucket_ori_pose": spaces.Box(
-                    -np.inf, np.inf, shape=(7,), dtype=np.float64
-                ),
-                "boxed_food_ori_pose": spaces.Box(
-                    -np.inf, np.inf, shape=(7,), dtype=np.float64
-                ),
-                "table_delta_height": spaces.Box(
-                    -np.inf, np.inf, shape=(1,), dtype=np.float64
-                ),
+                "gripper_pose": spaces.Box(-np.inf, np.inf, shape=(15,), dtype=np.float32),
+                "glass_ori_pose": spaces.Box(-np.inf, np.inf, shape=(7,), dtype=np.float64),
+                "box_ori_pose": spaces.Box(-np.inf, np.inf, shape=(7,), dtype=np.float64),
+                "table_delta_height": spaces.Box(-np.inf, np.inf, shape=(1,), dtype=np.float64),
             }
         )
 
@@ -155,10 +140,8 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         if self._wrist_camera_id < 0:
             missing.append("handcam_rgb")
         if len(missing) > 0:
-            raise RuntimeError(
-                f"Required camera(s) not found in MuJoCo model: {missing}. "
-                "Please ensure these cameras exist in your XML (names: 'front', 'handcam_rgb')."
-            )
+            raise RuntimeError(f"Required camera(s) not found in MuJoCo model: {missing}. "
+                               "Please ensure these cameras exist in your XML (names: 'front', 'handcam_rgb').")
         self.camera_id = (
             self._front_camera_id,
             self._ego_left_camera_id,
@@ -166,6 +149,21 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
             self._wrist_camera_id,
         )
 
+        self._table_body_id = self._model.body("table").id
+        self._table_body_z0 = float(self._model.body("table").pos[2])
+        self._table_leg_geom_ids = [
+            gid for gid in range(self._model.ngeom)
+            if self._model.geom_bodyid[gid] == self._table_body_id
+            and self._model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_CYLINDER
+        ]
+        self._table_leg_half_len0 = {
+            gid: float(self._model.geom_size[gid, 1]) for gid in self._table_leg_geom_ids
+        }
+
+        self._open_box_body_z0 = float(self._model.body("open_box").pos[2])
+        self._open_box_body_quat0 = self._model.body("open_box").quat.copy()
+        self._glass_body_z0 = float(self._model.body("glass").pos[2])
+        self._success_trigger_target = 50
         self._camera_params = np.load(_HERE / "replay_cameras.npy")
         self._num_preset_cameras = int(self._camera_params.shape[0])
         self._scene_center = np.array([0.0, 0.0, 1.0], dtype=np.float64)
@@ -195,37 +193,7 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
             "table_yellow-plaster",
         ]
 
-        self._table_body_z0 = float(self._model.body("table").pos[2])
-        self._table_body_id = self._model.body("table").id
-        self._table_leg_geom_ids = [
-            gid
-            for gid in range(self._model.ngeom)
-            if self._model.geom_bodyid[gid] == self._table_body_id
-            and self._model.geom_type[gid] == mujoco.mjtGeom.mjGEOM_CYLINDER
-        ]
-        self._table_leg_half_len0 = {
-            gid: float(self._model.geom_size[gid, 1])
-            for gid in self._table_leg_geom_ids
-        }
-
-        self._bucket_body_z0 = float(self._model.body("bucket").pos[2])
-        self._boxed_food_body_z0 = float(self._model.body("boxed_food_0").pos[2])
-        self._bucket_z = self._bucket_body_z0
-        self.delta_h = 0.0
-        self._bucket_bottom_site_ids = [
-            self.model.site(f"bucket_ref_{i}").id for i in (0, 2, 4, 6)
-        ]
-        self._bucket_bottom_z0 = None
-
-        # for dynamics randomization
-        self._bucket_body_id = self._model.body("bucket").id
-        self._boxed_food_body_id = self._model.body("boxed_food_0").id
-        self._bucket_mass0 = float(self._model.body_mass[self._bucket_body_id])
-        self._boxed_food_mass0 = float(self._model.body_mass[self._boxed_food_body_id])
-        self._mass_mul = (0.75, 1.25)
-        self._bucket_joint_id = self._model.joint("bucket_joint_0").id
-        self._bucket_dof_id = int(self._model.jnt_dofadr[self._bucket_joint_id])
-        self._bucket_friction_mul = (0.75, 1.25)
+        self._init_dynamics_cache()
 
     def _get_cam_id_by_name(self, name: str) -> int:
         """Return camera id from name; return -1 if not found."""
@@ -234,9 +202,7 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
             return int(cam.id)
         except Exception:
             try:
-                return int(
-                    mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, name)
-                )
+                return int(mujoco.mj_name2id(self._model, mujoco.mjtObj.mjOBJ_CAMERA, name))
             except Exception:
                 return -1
 
@@ -266,18 +232,59 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         random_camera_idx = random.randint(0, self._num_preset_cameras - 1)
         self._apply_random_camera_to_front(random_camera_idx)
 
+    def _init_dynamics_cache(self) -> None:
+        self._glasses_joint_0_id = int(self._model.joint("glass_joint_0").id)
+        self._glasses_joint_1_id = int(self._model.joint("glass_joint_1").id)
+        self._glasses_body_id = int(self._model.body("glass").id)
+
+        self._glasses_joint_0_frictionloss0 = float(
+            self._model.dof_frictionloss[self._glasses_joint_0_id]
+        )
+        self._glasses_joint_1_frictionloss0 = float(
+            self._model.dof_frictionloss[self._glasses_joint_1_id]
+        )
+
+        self._glasses_joint_0_stiffness0 = float(
+            self._model.jnt_stiffness[self._glasses_joint_0_id]
+        )
+        # print("GLASSES_JOINT_0_STIFFNESS0:", self._glasses_joint_0_stiffness0)
+        self._glasses_joint_1_stiffness0 = float(
+            self._model.jnt_stiffness[self._glasses_joint_1_id]
+        )
+
+        self._glasses_body_mass0 = float(self._model.body_mass[self._glasses_body_id])
+
+        # Multiplicative ranges for small randomization.
+        self._glasses_dyn_stiffness_mul = (1, 1.5)
+        self._glasses_dyn_mass_mul = (0.75, 1.25)
+
+
+    def _randomize_dynamics(self) -> None:
+        frictionloss = float(np.random.uniform(0.0, 0.05))
+        self._model.dof_frictionloss[self._glasses_joint_0_id] = frictionloss
+        self._model.dof_frictionloss[self._glasses_joint_1_id] = frictionloss
+
+        stiffness = self._glasses_joint_0_stiffness0 * float(
+            np.random.uniform(*self._glasses_dyn_stiffness_mul)
+        )
+        self._model.jnt_stiffness[self._glasses_joint_0_id] = stiffness
+        self._model.jnt_stiffness[self._glasses_joint_1_id] = stiffness
+
+        mass = self._glasses_body_mass0 * float(
+            np.random.uniform(*self._glasses_dyn_mass_mul)
+        )
+        self._model.body_mass[self._glasses_body_id] = mass
+
+        # print(f"Randomized dynamics: frictionloss={frictionloss:.4f}, stiffness={stiffness:.2f}, mass={mass:.2f}")
+
     def _prime_rgb_array_renderer(self):
         """Discard one offscreen frame per camera to avoid stale first-reset images."""
         self._viewer.render(render_mode="rgb_array", camera_id=self._wrist_camera_id)
         self._viewer.render(render_mode="rgb_array", camera_id=self._front_camera_id)
         if self._ego_left_camera_id >= 0:
-            self._viewer.render(
-                render_mode="rgb_array", camera_id=self._ego_left_camera_id
-            )
+            self._viewer.render(render_mode="rgb_array", camera_id=self._ego_left_camera_id)
         if self._ego_right_camera_id >= 0:
-            self._viewer.render(
-                render_mode="rgb_array", camera_id=self._ego_right_camera_id
-            )
+            self._viewer.render(render_mode="rgb_array", camera_id=self._ego_right_camera_id)
 
     def _apply_random_camera_to_front(self, camera_idx):
         camera = self._camera_params[camera_idx]
@@ -312,9 +319,7 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         self._model.cam_pos[self._front_camera_id] = cam_pos
         self._model.cam_quat[self._front_camera_id] = cam_quat_wxyz
 
-    def reset(
-        self, seed=None, **kwargs
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
+    def reset(self, seed=None, **kwargs) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         """Reset the environment."""
         mujoco.mj_resetData(self._model, self._data)
 
@@ -322,142 +327,92 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         self.delta_h = np.float64(np.random.uniform(0.0, 0.05))
 
         # Move the whole table body (absolute)
-        self._model.body_pos[self._table_body_id, 2] = (
-            self._table_body_z0 + self.delta_h
-        )
+        self._model.body_pos[self._table_body_id, 2] = self._table_body_z0 + self.delta_h
 
         # Adjust legs (absolute): extend so feet stay on floor
         for gid in self._table_leg_geom_ids:
-            self._model.geom_size[gid, 1] = (
-                self._table_leg_half_len0[gid] + self.delta_h
-            )
+            self._model.geom_size[gid, 1] = self._table_leg_half_len0[gid] + self.delta_h
 
         # Reset arm to home position.
         self._data.qpos[self._panda_qpos_ids if self._is_cr3 else self._panda_dof_ids] = self._arm_home if self._is_cr3 else _PANDA_HOME
         self._hand.reset(self._data)
 
         mujoco.mj_forward(self._model, self._data)
+
         # Reset mocap body to home position.
         tcp_pos = self._data.site_xpos[self._site_id].copy() if self._is_cr3 else self._data.sensor("franka/flange_pos").data
+        # print("Resetting TCP pos to:", self._data.mocap_pos)
         self._data.mocap_pos[0] = tcp_pos
 
-        # Sample a new bucket position.
-        bucket_xy = np.random.uniform(*_SAMPLING_BOUNDS)
-        self._bucket_z = self._bucket_body_z0 + self.delta_h
+        # Sample a new box position.
+        box_xy = np.random.uniform(*_BOX_SAMPLING_BOUNDS)
+        box_body_id = self._model.body("open_box").id
 
-        # --- Apply ±20° yaw perturbation to bucket ---
-        bucket_orig = np.array(
-            self._data.jnt("bucket_root").qpos[3:7], dtype=np.float64
-        )  # (w,x,y,z)
-        bucket_yaw = np.deg2rad(np.random.uniform(*_YAW_PERTURB_BOUNDS))
-        bqw, bqz = np.cos(bucket_yaw / 2), np.sin(bucket_yaw / 2)
+        # --- Apply ±20° yaw perturbation to open_box ---
+        box_orig = np.array(self._open_box_body_quat0, dtype=np.float64)  # (w,x,y,z)
+        box_yaw = np.deg2rad(np.random.uniform(*_YAW_PERTURB_BOUNDS))
+        bqw, bqz = np.cos(box_yaw / 2), np.sin(box_yaw / 2)
         bw1, bx1, by1, bz1 = bqw, 0, 0, bqz
-        bw2, bx2, by2, bz2 = bucket_orig
-        bucket_q_new = np.array(
-            [
-                bw1 * bw2 - bx1 * bx2 - by1 * by2 - bz1 * bz2,
-                bw1 * bx2 + bx1 * bw2 + by1 * bz2 - bz1 * by2,
-                bw1 * by2 - bx1 * bz2 + by1 * bw2 + bz1 * bx2,
-                bw1 * bz2 + bx1 * by2 - by1 * bx2 + bz1 * bw2,
-            ]
-        )
-        bucket_q_new /= np.linalg.norm(bucket_q_new)
-        self.bucket_ori_pose = np.concatenate(
-            [bucket_xy, [self._bucket_z], bucket_q_new]
-        ).astype(np.float64)
-        self._data.jnt("bucket_root").qpos = self.bucket_ori_pose
+        bw2, bx2, by2, bz2 = box_orig
+        box_q_new = np.array([
+            bw1 * bw2 - bx1 * bx2 - by1 * by2 - bz1 * bz2,
+            bw1 * bx2 + bx1 * bw2 + by1 * bz2 - bz1 * by2,
+            bw1 * by2 - bx1 * bz2 + by1 * bw2 + bz1 * bx2,
+            bw1 * bz2 + bx1 * by2 - by1 * bx2 + bz1 * bw2
+        ])
+        box_q_new /= np.linalg.norm(box_q_new)
+        self.open_box_ori_pose = np.concatenate([box_xy, [self._open_box_body_z0 + self.delta_h], box_q_new]).astype(np.float64)
+        self._model.body_pos[box_body_id] = self.open_box_ori_pose[:3]
+        self._model.body_quat[box_body_id] = self.open_box_ori_pose[3:7]
 
-        # Sample a new boxfood position.
-        box_food_xy = np.random.uniform(*_FOOD_SAMPLING_BOUNDS)
+        # Sample a new glass position.
+        body_id = self._model.body("glass").id
+        glass_xy = np.random.uniform(*_SAMPLING_BOUNDS)
+        self._data.jnt("glass_root").qpos[:2] = glass_xy
+        self._data.jnt("glass_root").qpos[2] = self._glass_body_z0 + self.delta_h
 
         # --- Apply ±20° yaw perturbation to original quaternion ---
-        orig = np.array(
-            self._data.jnt("boxed_food_0_freejoint").qpos[3:7], dtype=np.float64
-        )  # (w,x,y,z)
+        orig = np.array(self._data.jnt("glass_root").qpos[3:7], dtype=np.float64)  # (w,x,y,z)
         yaw = np.deg2rad(np.random.uniform(*_YAW_PERTURB_BOUNDS))
-        qw, qz = np.cos(yaw / 2), np.sin(yaw / 2)
+        qw, qz = np.cos(yaw/2), np.sin(yaw/2)
         # quaternion multiplication q_new = q_delta * orig
-        w1, x1, y1, z1 = qw, 0, 0, qz
-        w2, x2, y2, z2 = orig
-        q_new = np.array(
-            [
-                w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-                w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-                w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-                w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-            ]
-        )
+        w1,x1,y1,z1 = qw,0,0,qz
+        w2,x2,y2,z2 = orig
+        q_new = np.array([
+            w1*w2 - x1*x2 - y1*y2 - z1*z2,
+            w1*x2 + x1*w2 + y1*z2 - z1*y2,
+            w1*y2 - x1*z2 + y1*w2 + z1*x2,
+            w1*z2 + x1*y2 - y1*x2 + z1*w2
+        ])
         q_new /= np.linalg.norm(q_new)
-
-        self.box_food_ori_pose = np.concatenate(
-            [box_food_xy, [self._boxed_food_body_z0 + self.delta_h], q_new]
-        ).astype(np.float64)  # no yaw perturb for food
-        self._data.jnt("boxed_food_0_freejoint").qpos = self.box_food_ori_pose
+        self.glass_ori_pose = np.concatenate([glass_xy, [self._glass_body_z0 + self.delta_h], q_new]).astype(np.float64)
+        self._data.jnt("glass_root").qpos = self.glass_ori_pose
 
         if self.randomize:
             self.randomize_lighting()
             self.randomize_camera()
             self.randomize_desktop_texture()
 
-        if self._randomize_dynamics:
-            frictionloss = float(
-                self._model.dof_frictionloss[self._bucket_dof_id]
-            ) * float(
-                np.random.uniform(
-                    self._bucket_friction_mul[0], self._bucket_friction_mul[1]
-                )
-            )
-
-            self._model.dof_frictionloss[self._bucket_dof_id] = frictionloss
-
-            mass_mul = float(np.random.uniform(self._mass_mul[0], self._mass_mul[1]))
-            self._model.body_mass[self._bucket_body_id] = self._bucket_mass0 * mass_mul
-            mass_mul = float(np.random.uniform(self._mass_mul[0], self._mass_mul[1]))
-            self._model.body_mass[self._boxed_food_body_id] = (
-                self._boxed_food_mass0 * mass_mul
-            )
-
-        # print(
-        #     "bucket handle: frictionloss="
-        #     f"{self._model.dof_frictionloss[self._bucket_dof_id]}, "
-        #     "stiffness="
-        #     f"{self._model.jnt_stiffness[self._bucket_joint_id]}"
-        # )
-        # print(
-        #     "bucket mass="
-        #     f"{self._model.body_mass[self._bucket_body_id]}, "
-        #     "boxed_food mass="
-        #     f"{self._model.body_mass[self._boxed_food_body_id]}"
-        # )
-
         mujoco.mj_forward(self._model, self._data)
 
         self.env_step = 0
-        self._bucket_bottom_z0 = self._data.site_xpos[
-            self._bucket_bottom_site_ids, 2
-        ].copy()
+        self._success_trigger_count = 0
         self._prime_rgb_array_renderer()
 
         obs = self._compute_observation()
+
+        if self.randomize_dynamics:
+            self._randomize_dynamics()
+
         return obs, {"succeed": False}
 
-    def step(
-        self, action: np.ndarray
-    ) -> Tuple[Dict[str, np.ndarray], float, bool, bool, Dict[str, Any]]:
+    def step(self, action: np.ndarray) -> Tuple[Dict[str, np.ndarray], float, bool, bool, Dict[str, Any]]:
         start_time = time.time()
 
         if action is None or action.shape[0] < 7:
             raise ValueError("Action must have at least 7 elements (franka delta).")
 
-        x, y, z, w, qx, qy, qz = (
-            action[0],
-            action[1],
-            action[2],
-            action[3],
-            action[4],
-            action[5],
-            action[6],
-        )
+        x, y, z, w, qx, qy, qz = action[0], action[1], action[2], action[3], action[4], action[5], action[6]
 
         pos = self._data.mocap_pos[0].copy()
         quat = self._data.mocap_quat[0].copy()
@@ -491,8 +446,6 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
 
             mujoco.mj_step(self._model, self._data)
 
-        # cone alpha logic (same as before)
-
         obs = self._compute_observation()
 
         self.env_step += 1
@@ -503,37 +456,81 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
         if self.render_mode == "human":
             self._viewer.render(self.render_mode)
         dt = time.time() - start_time
-        # if self.intervened:
+
         time.sleep(max(0, (1.0 / self.hz) - dt))
         success = self._compute_success()
         rew = 1.0 if success else 0.0
         terminated = terminated or success
 
+        if self.reset_trigger:
+            self.reset()
+
         return obs, rew, terminated, False, {"succeed": success, "grasp_penalty": 0.0}
 
     def _compute_success(self):
-        box_pos = np.array(self._data.sensor("boxed_food_0_pos").data, dtype=float)
-        site_ids = [self.model.site(f"bucket_ref_{i}").id for i in range(8)]
-        corners = np.array(self._data.site_xpos[site_ids], dtype=float)  # (8,3)
-        mins = corners.min(axis=0)
-        maxs = corners.max(axis=0)
-        inside = np.all(box_pos >= mins) and np.all(box_pos <= maxs)
-        bottom_z = self._data.site_xpos[self._bucket_bottom_site_ids, 2]
-        lifted = np.all(bottom_z - self._bucket_bottom_z0 >= 0.15)
-        success = inside and lifted
+        # Read the glass position in world coordinates
+        glass_pos_world = np.array(self._data.sensor("glass_pos").data, dtype=np.float64)
 
-        return success
+        glass_body_id = self._model.body("glass").id
+        glass_pos_world_2 = np.array(self._model.body_pos[glass_body_id], dtype=np.float64)
+        # print("Debug: glass_pos_world (sensor):", glass_pos_world)
+        glass_quat_world = np.array(self._data.sensor("glass_quat").data, dtype=np.float64)
+        # print("Debug: glass_quat_world (sensor):", glass_quat_world)
+
+        # Read the world position of the open_box (assuming no rotation)
+        box_pos_world = None
+        body_id = self._model.body("open_box").id
+        box_pos_world = np.array(self._model.body_pos[body_id], dtype=np.float64)
+
+        # Transform from world coordinates to box-local coordinates
+        glass_local = glass_pos_world - box_pos_world
+
+        # Inner cavity bounds of the box (derived from the XML, assuming `size` is half-extent)
+        x_half = 0.145    # = 0.1475 - 0.0025
+        y_half = 0.145
+        z_min = -0.045
+        z_max =  0.0475
+        inside_x = (-x_half <= glass_local[0] <= x_half)
+        inside_y = (-y_half <= glass_local[1] <= y_half)
+        inside_z = (z_min  <= glass_local[2] <= z_max - 0.02)
+
+        # Original joint angle conditions
+        glass_joint_0_pos = self._data.sensor("glass_joint_0_pos").data
+        glass_joint_1_pos = self._data.sensor("glass_joint_1_pos").data
+        j0 = float(glass_joint_0_pos[0])
+        j1 = float(glass_joint_1_pos[0])
+
+        if j0 > 1.1 and j1 > 1.1:
+            pass
+            # print("-----Glass folded!-----")
+        trigger_active = (
+            (j0 > 1.1)
+            and (j1 > 1.1)
+            and inside_x
+            and inside_y
+            and inside_z
+        )
+
+        if trigger_active:
+            # Increment counter if the condition is met
+            self._success_trigger_count += 1
+        else:
+            # Reset counter if the condition is not met
+            self._success_trigger_count = 0
+
+        # Return success if the condition has been met 10 times consecutively
+        return self._success_trigger_count >= self._success_trigger_target
+
 
     # ==========================
     def render(self):
         rendered_frames = []
         for cam_id in self.camera_id:
-            rendered_frames.append(
-                self._viewer.render(render_mode="rgb_array", camera_id=cam_id)
-            )
+            rendered_frames.append(self._viewer.render(render_mode="rgb_array", camera_id=cam_id))
         return rendered_frames
 
     # Helper methods.
+
     def _compute_observation(self) -> dict:
         obs = {}
         obs["state"] = {}
@@ -546,28 +543,29 @@ class PandaPickBucketGymEnv(MujocoGymEnv):
             tcp_pos = self._data.sensor("franka/flange_pos").data
             tcp_quat = self._data.sensor("franka/flange_quat").data
         tcp_pose = np.concatenate([tcp_pos, tcp_quat])
+
         allegro_qpos = self._hand.policy_state(self._data)
 
         obs["state"] = {
             "tcp_pose": tcp_pose,
             "gripper_pose": allegro_qpos,
-            "bucket_ori_pose": self.bucket_ori_pose,
-            "boxed_food_ori_pose": self.box_food_ori_pose,
+            "glass_ori_pose": self.glass_ori_pose,
+            "box_ori_pose": self.open_box_ori_pose,
             "table_delta_height": np.asarray([self.delta_h], dtype=np.float64),
         }
 
-        # if self.image_obs:
-        obs["images"] = {}
-        (
-            obs["images"]["random_camera" if self.randomize else "front"],
-            obs["images"]["ego_left"],
-            obs["images"]["ego_right"],
-            obs["images"]["wrist"],
-        ) = self.render()
-
+        if self.image_obs:
+            obs["images"] = {}
+            (
+                obs["images"]["random_camera" if self.randomize else "front"],
+                obs["images"]["ego_left"],
+                obs["images"]["ego_right"],
+                obs["images"]["wrist"],
+            ) = self.render()
         return obs
 
     def get_end_effector_pose_matrix(self) -> np.ndarray:
+
         pos = self._data.mocap_pos[0]
         quat = self._data.mocap_quat[0]
         quat = np.array([quat[1], quat[2], quat[3], quat[0]])

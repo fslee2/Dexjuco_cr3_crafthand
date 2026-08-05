@@ -10,44 +10,39 @@ from gymnasium import spaces
 from scipy.spatial.transform import Rotation as R
 
 from ..controllers import opspace
-from ..mujoco_gym_env import GymRenderingSpec, MujocoGymEnv
+from ..mujoco_gym_env import MujocoGymEnv
 from ..rendering import MujocoRenderer
 from .hand_models import HandType, SingleArmHand, model_for_hand
 from .cr3_craft_task_compat import configure_cr3_task_env
 
 _HERE = Path(__file__).parent
-_XML_PATH = _HERE / "xmls" / "arena_arm_hand_hammer_nail.xml"
-
+_XML_PATH = _HERE / "xmls" / "arena_arm_hand_table_tongs.xml"
 _PANDA_HOME = np.asarray((0, -0.785, 0, -2.35, 0, 1.57, np.pi / 4))
 _ALLEGRO_HOME = np.asarray(
-    (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.263, 0, 0, 0), dtype=np.float32
+    (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.263, 0, 0, 0),
+    dtype=np.float32,
 )
-
-_HAMMER_SAMPLING_BOUNDS = np.asarray([[-0.25, -0.35], [-0.40, -0.50]])
-_NAIL_SAMPLING_BOUNDS = np.asarray([[-0.10, 0.00], [0.00, 0.10]])
-_HAMMER_YAW_PERTURB_BOUNDS = np.array([-10, 10])
-
+_TONGS_XY_BOUNDS = np.asarray([[-0.35, -0.25], [-0.3, -0.2]])
+_MATCHED_Z = 0.955
+_LIFT_HEIGHT = 0.1
+_TONGS_CLOSE_THRESHOLD = -0.07
+_TONGS_OPEN_THRESHOLD = 0.1
+_REQUIRED_PINCHES = 3
 _N_ALLEGRO = 16
 
 
-class PandaHammerNailGymEnv(MujocoGymEnv):
+class Cr3CraftPinchTongsEnv(MujocoGymEnv):
     metadata = {"render_modes": ["rgb_array", "human"]}
 
     def __init__(
         self,
-        action_scale: np.ndarray = np.asarray([0.1, 1]),
+        randomize: bool,
+        randomize_dynamics: bool = False,
         seed: int = 0,
         control_dt: float = 0.02,
         physics_dt: float = 0.002,
         render_mode: Literal["rgb_array", "human"] = "rgb_array",
-        config=None,
-        hz=30,
-        success_depth: float = 0.04,
-        impact_insert_step: float = 0.008,
-        impact_vel_threshold: float = 0.02,
-        max_insert_depth: float = 0.0726,
-        randomize: bool = False,
-        randomize_dynamics: bool = False,
+        hz: int = 30,
         hand: HandType = "craft",
     ):
         self.hand = hand
@@ -75,75 +70,36 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
 
         self.render_mode = render_mode
         self.env_step = 0
-        self._success_depth = float(success_depth)
-        self._impact_insert_step = float(impact_insert_step)
-        self._impact_vel_threshold = float(impact_vel_threshold)
-        self._nail_max_depth = float(max_insert_depth)
+        self.intervened = False
+        self._pinch_count = 0
+        self._pinch_in_progress = True
 
         if hand == "craft":
             configure_cr3_task_env(self)
         else:
-            # Panda caches
-            self._panda_dof_ids = np.asarray(
-                [self._model.joint(f"joint{i}").id for i in range(1, 8)]
-            )
-            self._panda_ctrl_ids = np.asarray(
-                [self._model.actuator(f"actuator{i}").id for i in range(1, 8)]
-            )
-            self._panda_mocap_id = int(self._model.body("target").mocapid[0])
+            self._panda_dof_ids = np.asarray([self._model.joint(f"joint{i}").id for i in range(1, 8)])
+            self._panda_ctrl_ids = np.asarray([self._model.actuator(f"actuator{i}").id for i in range(1, 8)])
             self._site_id = self._model.site("attachment_site").id
             self._hand = SingleArmHand(self._model, hand)
-
-        # Nail body (mocap) for insertion depth.
-        nail_body_id = self._model.body("nail").id
-        self._nail_mocap_id = int(self._model.body("nail").mocapid[0])
-        if self._nail_mocap_id < 0:
-            raise RuntimeError("Nail body must be mocap-enabled (mocap='true') in XML.")
-        self._nail_init_pos = self._model.body_pos[nail_body_id].copy()
-        self._nail_init_quat = self._model.body_quat[nail_body_id].copy()
-        self._nail_depth = 0.0
-
-        # Contact-driven interaction between hammer and nail.
-        self._hammer_geom_ids = []
-        for name in ("face", "head", "neck", "claw"):
-            try:
-                self._hammer_geom_ids.append(self._model.geom(name).id)
-            except Exception:
-                continue
-
-        self._nail_geom_ids = []
-        for name in ("nail_head", "nail_shaft"):
-            try:
-                self._nail_geom_ids.append(self._model.geom(name).id)
-            except Exception:
-                continue
-
+        self._tongs_z = _MATCHED_Z
+        self._table_site_id = None
         try:
-            self._model.body("hammer_body").id
+            self._table_site_id = self._model.site("table_top").id
         except Exception:
-            pass
-
-        try:
-            self._face_gid = self._model.geom("face").id
-        except Exception:
-            self._face_gid = -1
-        self._prev_face_z = None
-        self._vz_buf: list[float] = []
+            self._table_site_id = None
+        self._table_z = 0.92
+        self._lift_z = self._table_z + _LIFT_HEIGHT
 
         image_h = int(self._model.vis.global_.offheight)
         image_w = int(self._model.vis.global_.offwidth)
 
-        # Observation space
         self.observation_space = gym.spaces.Dict(
             {
                 "state": gym.spaces.Dict(
                     {
                         "tcp_pose": gym.spaces.Box(-np.inf, np.inf, shape=(7,)),
-                        "gripper_pose": gym.spaces.Box(-1, 1, shape=(1,)),
-                        "hammer_ori_pose": gym.spaces.Box(
-                            -np.inf, np.inf, shape=(7,), dtype=np.float64
-                        ),
-                        "nail_ori_pose": gym.spaces.Box(
+                        "gripper_pose": gym.spaces.Box(-1, 1, shape=(15,)),
+                        "tongs_ori_pose": gym.spaces.Box(
                             -np.inf, np.inf, shape=(7,), dtype=np.float64
                         ),
                         "table_delta_height": gym.spaces.Box(
@@ -151,7 +107,7 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
                         ),
                     }
                 ),
-                "images": spaces.Dict(
+                "images": gym.spaces.Dict(
                     {
                         "wrist": spaces.Box(
                             0, 255, shape=(image_h, image_w, 3), dtype=np.uint8
@@ -164,18 +120,10 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             }
         )
 
-        if hand == "craft":
-            self.action_space = gym.spaces.Box(
-                low=np.concatenate((np.full(7, -1.0), np.zeros(15))),
-                high=np.concatenate((np.full(7, 1.0), np.full(15, 2.0 * np.pi))),
-                dtype=np.float32,
-            )
-        else:
-            self.action_space = gym.spaces.Box(
-                low=np.full(7 + _N_ALLEGRO, -1.0, dtype=np.float32),
-                high=np.full(7 + _N_ALLEGRO, 1.0, dtype=np.float32),
-                dtype=np.float32,
-            )
+        self.action_space = gym.spaces.Box(
+            low=np.concatenate((np.full(7, -1.0), np.zeros(15))),
+            high=np.concatenate((np.full(7, 1.0), np.full(15, 2.0 * np.pi))), dtype=np.float32,
+        )
 
         self._viewer = MujocoRenderer(self.model, self.data)
         try:
@@ -196,8 +144,8 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
                     return -1
 
         front_id = _get_cam_id_by_name("front")
-        ego_left_id = _get_cam_id_by_name("left")
-        ego_right_id = _get_cam_id_by_name("right")
+        left_id = _get_cam_id_by_name("left")
+        right_id = _get_cam_id_by_name("right")
         handcam_rgb_id = _get_cam_id_by_name("handcam_rgb")
 
         missing = []
@@ -205,14 +153,12 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             missing.append("front")
         if handcam_rgb_id < 0:
             missing.append("handcam_rgb")
-        if len(missing) > 0:
+        if missing:
             raise RuntimeError(
                 f"Required camera(s) not found in MuJoCo model: {missing}. "
                 "Please ensure these cameras exist in your XML (names: 'front', 'handcam_rgb')."
             )
-        self.camera_id = (front_id, ego_left_id, ego_right_id, handcam_rgb_id)
-        self._front_camera_id = front_id
-        self._wrist_camera_id = handcam_rgb_id
+        self.camera_id = (front_id, left_id, right_id, handcam_rgb_id)
 
         self._table_body_id = self._model.body("table").id
         self._table_body_z0 = float(self._model.body("table").pos[2])
@@ -226,22 +172,14 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             gid: float(self._model.geom_size[gid, 1])
             for gid in self._table_leg_geom_ids
         }
+        self._tongs_z0 = _MATCHED_Z
 
-        self._wood_body_z0 = float(self._model.body("wood").pos[2])
-        self._hammer_body_z0 = float(self._model.body("hammer_body").pos[2])
-        self._nail_body_z0 = float(self._model.body("nail").pos[2])
-
-        # --- randomize support copied from code2 ---
         self._orig_light_pos = self._model.light_pos.copy()
         self._orig_light_dir = self._model.light_dir.copy()
 
-        camera_param_path = _HERE / "replay_cameras.npy"
-        if camera_param_path.exists():
-            self._camera_params = np.load(camera_param_path)
-        else:
-            self._camera_params = np.zeros((0, 3), dtype=np.float64)
+        self._front_camera_id = int(self._model.camera("front").id)
+        self._camera_params = np.load(_HERE / "replay_cameras.npy")
         self._num_preset_cameras = int(self._camera_params.shape[0])
-
         self._scene_center = np.array([0.0, 0.0, 1.0], dtype=np.float64)
 
         self._table_geom_id = mujoco.mj_name2id(
@@ -255,7 +193,7 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             "table_ceramic",
             "table_cream-plaster",
             "table_dark_wood_planks_2",
-            "dark_wood_mat",
+            "table_dark-wood",
             "table_gray-plaster",
             "table_gray_wood_planks",
             "table_light-wood",
@@ -271,16 +209,14 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             "table_yellow-plaster",
         ]
 
-        try:
-            self._hammer_body_id = self._model.body("hammer_body").id
-        except Exception:
-            self._hammer_body_id = -1
-        self._hammer_mass0 = (
-            float(self._model.body_mass[self._hammer_body_id])
-            if self._hammer_body_id >= 0
-            else 0.0
-        )
-        self._hammer_mass_mul = (0.75, 1.25)
+        self._tongs_body_id = self._model.body("link_1").id
+        self._tongs_mass0 = float(self._model.body_mass[self._tongs_body_id])
+        self._tongs_mass_mul = (0.75, 1.25)
+        self._tongs_joint_id = self._model.joint("joint_0").id
+        self._tongs_dof_id = int(self._model.jnt_dofadr[self._tongs_joint_id])
+        self._tongs_friction_range = (0.0, 0.05)
+        self._tongs_stiffness0 = float(self._model.jnt_stiffness[self._tongs_joint_id])
+        self._tongs_stiffness_mul = (0.75, 1.25)
 
     def randomize_lighting(self):
         model = self._model
@@ -309,10 +245,6 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
         random_camera_idx = random.randint(0, self._num_preset_cameras - 1)
         self._apply_random_camera_to_front(random_camera_idx)
 
-    def _prime_rgb_array_renderer(self):
-        self._viewer.render(render_mode="rgb_array", camera_id=self._wrist_camera_id)
-        self._viewer.render(render_mode="rgb_array", camera_id=self._front_camera_id)
-
     def _apply_random_camera_to_front(self, camera_idx):
         camera = self._camera_params[camera_idx]
         azimuth = float(camera[0])
@@ -336,10 +268,8 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
         forward /= np.linalg.norm(forward)
 
         world_up = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-
         right = np.cross(forward, world_up)
         right /= np.linalg.norm(right)
-
         up = np.cross(right, forward)
 
         rot_matrix = np.column_stack([right, up, -forward])
@@ -353,7 +283,6 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         mujoco.mj_resetData(self._model, self._data)
 
-        # reset table height
         self.delta_h = np.float64(np.random.uniform(0.0, 0.05))
 
         self._model.body_pos[self._table_body_id, 2] = (
@@ -365,68 +294,38 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
                 self._table_leg_half_len0[gid] + self.delta_h
             )
 
-        self._model.body_pos[self._model.body("wood").id, 2] = (
-            self._wood_body_z0 + self.delta_h
-        )
-        self._model.body_pos[self._model.body("hammer_body").id, 2] = (
-            self._hammer_body_z0 + self.delta_h
-        )
-        self._data.mocap_pos[self._nail_mocap_id][2] = self._nail_body_z0 + self.delta_h
-        self._nail_init_pos[2] = self._nail_body_z0 + self.delta_h
-
-        # Randomize hammer position (x, y) and yaw
-        hammer_xy = np.random.uniform(*_HAMMER_SAMPLING_BOUNDS)
-        hammer_orig = np.array(
-            self._data.jnt("hammer_joint").qpos[3:7], dtype=np.float64
-        )
-        hammer_yaw = np.deg2rad(np.random.uniform(*_HAMMER_YAW_PERTURB_BOUNDS))
-        hqw, hqz = np.cos(hammer_yaw / 2), np.sin(hammer_yaw / 2)
-        hw1, hx1, hy1, hz1 = hqw, 0, 0, hqz
-        hw2, hx2, hy2, hz2 = hammer_orig
-        hammer_q_new = np.array(
-            [
-                hw1 * hw2 - hx1 * hx2 - hy1 * hy2 - hz1 * hz2,
-                hw1 * hx2 + hx1 * hw2 + hy1 * hz2 - hz1 * hy2,
-                hw1 * hy2 - hx1 * hz2 + hy1 * hw2 + hz1 * hx2,
-                hw1 * hz2 + hx1 * hy2 - hy1 * hx2 + hz1 * hw2,
-            ]
-        )
-        hammer_q_new /= np.linalg.norm(hammer_q_new)
-        self.hammer_ori_pose = np.concatenate(
-            [hammer_xy, [self._hammer_body_z0 + self.delta_h], hammer_q_new]
-        ).astype(np.float64)
-        self._data.jnt("hammer_joint").qpos = self.hammer_ori_pose
-
-        # Randomize nail position (x, y)
-        nail_xy = np.random.uniform(*_NAIL_SAMPLING_BOUNDS)
-        self._nail_init_pos[:2] = nail_xy
-        self._data.mocap_pos[self._nail_mocap_id][:2] = nail_xy
-
-        if self._is_cr3:
-            self._data.qpos[self._panda_qpos_ids] = self._arm_home
-        else:
-            self._data.qpos[self._panda_dof_ids] = _PANDA_HOME
+        self._data.qpos[self._panda_qpos_ids if self._is_cr3 else self._panda_dof_ids] = self._arm_home if self._is_cr3 else _PANDA_HOME
         self._hand.reset(self._data)
-        self._nail_depth = 0.0
-        self.nail_ori_pose = np.concatenate(
-            [self._nail_init_pos, self._nail_init_quat]
-        ).astype(np.float64)
-        self._data.mocap_pos[self._nail_mocap_id] = self._nail_init_pos
-        self._data.mocap_quat[self._nail_mocap_id] = self._nail_init_quat
-
         mujoco.mj_forward(self._model, self._data)
 
-        tcp_pos = (
-            self._data.site_xpos[self._site_id].copy()
-            if self._is_cr3
-            else self._data.sensor("franka/flange_pos").data
-        )
-        self._data.mocap_pos[self._panda_mocap_id] = tcp_pos
+        tcp_pos = self._data.site_xpos[self._site_id].copy() if self._is_cr3 else self._data.sensor("franka/flange_pos").data
+        self._data.mocap_pos[0] = tcp_pos
 
-        self.env_step = 0
-        if self._face_gid >= 0:
-            self._prev_face_z = float(self._data.geom_xpos[self._face_gid][2])
-            self._vz_buf.clear()
+        if self._table_site_id is not None:
+            self._table_z = float(self._data.site_xpos[self._table_site_id][2])
+        self._lift_z = self._table_z + _LIFT_HEIGHT
+        self._tongs_z = self._tongs_z0 + self.delta_h
+
+        tongs_xy = np.random.uniform(*_TONGS_XY_BOUNDS)
+        tongs_ori_quat = self._data.jnt("tongs_root").qpos[3:7]
+        self.tongs_ori_pose = np.concatenate(
+            [tongs_xy, [self._tongs_z], tongs_ori_quat]
+        ).astype(np.float64)
+        self._data.jnt("tongs_root").qpos = self.tongs_ori_pose
+
+        try:
+            tongs_joint_0_id = mujoco.mj_name2id(
+                self._model, mujoco.mjtObj.mjOBJ_JOINT, "joint_0"
+            )
+            if tongs_joint_0_id >= 0:
+                tongs_joint_0_addr = self._model.jnt_qposadr[tongs_joint_0_id]
+                self._data.qpos[tongs_joint_0_addr] = 0.3
+        except Exception:
+            pass
+            # print("[Warning] failed to set joint_0 initial position:", e)
+
+        self._pinch_count = 0
+        self._pinch_in_progress = False
 
         if self.randomize:
             self.randomize_lighting()
@@ -434,23 +333,40 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             self.randomize_desktop_texture()
 
         if self._randomize_dynamics:
-            mass = float(
-                np.random.uniform(self._hammer_mass_mul[0], self._hammer_mass_mul[1])
+            frictionloss = float(
+                np.random.uniform(
+                    self._tongs_friction_range[0], self._tongs_friction_range[1]
+                )
             )
-            self._model.body_mass[self._hammer_body_id] = self._hammer_mass0 * mass
+            stiffness = self._tongs_stiffness0 * float(
+                np.random.uniform(
+                    self._tongs_stiffness_mul[0], self._tongs_stiffness_mul[1]
+                )
+            )
+            self._model.dof_frictionloss[self._tongs_dof_id] = frictionloss
+            self._model.jnt_stiffness[self._tongs_joint_id] = stiffness
+
+            mass_mul = float(
+                np.random.uniform(self._tongs_mass_mul[0], self._tongs_mass_mul[1])
+            )
+            self._model.body_mass[self._tongs_body_id] = self._tongs_mass0 * mass_mul
+
         # print(
-        #     "hammer mass="
-        #     f"{self._model.body_mass[self._hammer_body_id]}"
+        #     "tongs joint_0: frictionloss="
+        #     f"{self._model.dof_frictionloss[self._tongs_dof_id]}, "
+        #     "stiffness="
+        #     f"{self._model.jnt_stiffness[self._tongs_joint_id]}"
+        # )
+        # print(
+        #     "tongs mass="
+        #     f"{self._model.body_mass[self._tongs_body_id]}"
         # )
 
         mujoco.mj_forward(self._model, self._data)
 
-        if self.randomize:
-            self._prime_rgb_array_renderer()
-
+        self.env_step = 0
         obs = self._compute_observation()
-
-        return obs, {"succeed": False, "nail_depth": float(self._nail_depth)}
+        return obs, {"succeed": False}
 
     def step(
         self, action: np.ndarray
@@ -470,20 +386,18 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             action[6],
         )
 
-        pos = self._data.mocap_pos[self._panda_mocap_id].copy()
-        quat = self._data.mocap_quat[self._panda_mocap_id].copy()
+        pos = self._data.mocap_pos[0].copy()
+        quat = self._data.mocap_quat[0].copy()
 
         tpos = np.asarray([x, y, z])
         tquat = np.array([w, qx, qy, qz])
 
         if np.allclose(tpos, 0.0) and np.allclose(tquat, 0.0):
-            self._data.mocap_pos[self._panda_mocap_id] = pos
-            self._data.mocap_quat[self._panda_mocap_id] = quat
+            self._data.mocap_pos[0] = pos
+            self._data.mocap_quat[0] = quat
         else:
-            self._data.mocap_pos[self._panda_mocap_id] = tpos
-            self._data.mocap_quat[self._panda_mocap_id] = tquat
-
-        nail_depth = float(self._nail_depth)
+            self._data.mocap_pos[0] = tpos
+            self._data.mocap_quat[0] = tquat
 
         for _ in range(self._n_substeps):
             tau = opspace(
@@ -491,8 +405,8 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
                 data=self._data,
                 site_id=self._site_id,
                 dof_ids=self._panda_dof_ids,
-                pos=self._data.mocap_pos[self._panda_mocap_id],
-                ori=self._data.mocap_quat[self._panda_mocap_id],
+                pos=self._data.mocap_pos[0],
+                ori=self._data.mocap_quat[0],
                 joint=self._arm_home if self._is_cr3 else _PANDA_HOME,
                 gravity_comp=True,
                 pos_gains=(400.0, 400.0, 400.0),
@@ -503,21 +417,9 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
             self._hand.apply_action(self._data, action)
 
             mujoco.mj_step(self._model, self._data)
-            if self._face_gid >= 0:
-                face_z = float(self._data.geom_xpos[self._face_gid][2])
-                if self._prev_face_z is None:
-                    self._prev_face_z = face_z
-                vz = (face_z - self._prev_face_z) / self.control_dt
-                self._prev_face_z = face_z
-                self._vz_buf.append(vz)
-                if len(self._vz_buf) > 12:
-                    self._vz_buf.pop(0)
-            self._nail_depth = nail_depth
 
-        hit = self._apply_hammer_nail_interaction()
-
+        self._update_pinch_count()
         obs = self._compute_observation()
-
         self.env_step += 1
         terminated = self.env_step >= 1000
 
@@ -532,78 +434,20 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
         time.sleep(max(0, (1.0 / self.hz) - dt))
 
         success = self._compute_success()
-        rew = 1.0 if success else 0.0
+        reward = 1.0 if success else 0.0
         terminated = terminated or success
 
         return (
             obs,
-            rew,
+            reward,
             terminated,
             False,
             {
                 "succeed": success,
-                "grasp_penalty": 0.0,
-                "nail_depth": float(self._nail_depth),
-                "hammer_hit": hit,
+                "pinch_count": self._pinch_count,
             },
         )
 
-    def _compute_success(self):
-        return float(self._nail_depth) >= self._success_depth
-
-    def get_nail_depth(self) -> float:
-        return float(self._nail_depth)
-
-    def set_nail_depth(self, depth: float) -> None:
-        depth = float(np.clip(depth, 0.0, self._nail_max_depth))
-        self._nail_depth = depth
-        new_pos = self._nail_init_pos.copy()
-        new_pos[2] = self._nail_init_pos[2] - depth
-        self._data.mocap_pos[self._nail_mocap_id] = new_pos
-        self._data.mocap_quat[self._nail_mocap_id] = self._nail_init_quat
-        mujoco.mj_forward(self._model, self._data)
-
-    def _apply_hammer_nail_interaction(self) -> bool:
-        if not self._hammer_geom_ids or not self._nail_geom_ids:
-            return False
-
-        hammer_set = set(self._hammer_geom_ids)
-        nail_set = set(self._nail_geom_ids)
-        hit = False
-        ncon = int(self._data.ncon)
-        for i in range(ncon):
-            c = self._data.contact[i]
-            g1 = int(c.geom1)
-            g2 = int(c.geom2)
-            if (g1 in hammer_set and g2 in nail_set) or (
-                g2 in hammer_set and g1 in nail_set
-            ):
-                hit = True
-                break
-
-        if not hit:
-            return False
-
-        preimpact_vz = min(self._vz_buf) if self._vz_buf else 0.0
-        if preimpact_vz >= -self._impact_vel_threshold:
-            return True
-
-        depth = float(self._nail_depth)
-        max_depth = float(self._nail_max_depth)
-        scale = min(3.0, abs(preimpact_vz) / max(self._impact_vel_threshold, 1e-6))
-        delta = self._impact_insert_step * scale
-        new_depth = min(max_depth, depth + delta)
-        if new_depth > depth:
-            self._nail_depth = new_depth
-            new_pos = self._nail_init_pos.copy()
-            new_pos[2] = self._nail_init_pos[2] - new_depth
-            self._data.mocap_pos[self._nail_mocap_id] = new_pos
-            self._data.mocap_quat[self._nail_mocap_id] = self._nail_init_quat
-            mujoco.mj_forward(self._model, self._data)
-
-        return True
-
-    # ==========================
     def render(self):
         rendered_frames = []
         for cam_id in self.camera_id:
@@ -613,13 +457,10 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
         return rendered_frames
 
     def _compute_observation(self) -> dict:
-        obs = {}
-        obs["state"] = {}
-
         if self._is_cr3:
             tcp_pos = self._data.site_xpos[self._site_id].copy()
-            tcp_quat = R.from_matrix(self._data.site_xmat[self._site_id].reshape(3, 3)).as_quat()
-            tcp_quat = np.asarray((tcp_quat[3], tcp_quat[0], tcp_quat[1], tcp_quat[2]))
+            xyzw = R.from_matrix(self._data.site_xmat[self._site_id].reshape(3, 3)).as_quat()
+            tcp_quat = np.asarray((xyzw[3], xyzw[0], xyzw[1], xyzw[2]))
         else:
             tcp_pos = self._data.sensor("franka/flange_pos").data
             tcp_quat = self._data.sensor("franka/flange_quat").data
@@ -627,6 +468,7 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
 
         allegro_qpos = self._hand.policy_state(self._data)
 
+        obs = {}
         obs["images"] = {}
         (
             obs["images"]["random_camera" if self.randomize else "front"],
@@ -638,16 +480,54 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
         obs["state"] = {
             "tcp_pose": tcp_pose,
             "gripper_pose": allegro_qpos,
-            "hammer_ori_pose": self.hammer_ori_pose,
-            "nail_ori_pose": self.nail_ori_pose,
+            "tongs_ori_pose": self.tongs_ori_pose,
             "table_delta_height": self.delta_h,
         }
 
         return obs
 
+    def _update_pinch_count(self) -> None:
+        try:
+            joint_pos = float(self._data.sensor("tongs_joint_0_pos").data[0])
+        except Exception:
+            return
+
+        if joint_pos <= _TONGS_CLOSE_THRESHOLD and self._pinch_in_progress:
+            self._pinch_in_progress = False
+            self._pinch_count += 1
+        elif joint_pos >= _TONGS_OPEN_THRESHOLD and not self._pinch_in_progress:
+            self._pinch_in_progress = True
+
+        # print(f"Pinch count: {self._pinch_count}, Joint pos: {joint_pos:.3f}")
+
+    def _compute_success(self) -> bool:
+        try:
+            tongs_pos = self._data.sensor("tongs_pos").data
+        except Exception:
+            return False
+
+        lifted = tongs_pos[2] >= self._lift_z
+        triggered = lifted and self._pinch_count >= _REQUIRED_PINCHES
+
+        if triggered:
+            if not getattr(self, "_success_started", False):
+                self._success_started = True
+                self._success_counter = 1
+            else:
+                self._success_counter += 1
+        else:
+            self._success_started = False
+            self._success_counter = 0
+
+        # print(f"Triggered: {triggered}")
+        if getattr(self, "_success_counter", 0) >= 30:
+            return True
+
+        return False
+
     def get_end_effector_pose_matrix(self) -> np.ndarray:
-        pos = self._data.mocap_pos[self._panda_mocap_id]
-        quat = self._data.mocap_quat[self._panda_mocap_id]
+        pos = self._data.mocap_pos[0]
+        quat = self._data.mocap_quat[0]
         quat = np.array([quat[1], quat[2], quat[3], quat[0]])
         rot_mat = R.from_quat(quat).as_matrix()
         T = np.eye(4)
@@ -657,9 +537,9 @@ class PandaHammerNailGymEnv(MujocoGymEnv):
 
 
 if __name__ == "__main__":
-    env = PandaHammerNailGymEnv(render_mode="human", randomize=True)
-    obs, info = env.reset()
+    env = Cr3CraftPinchTongsEnv(render_mode="human")
+    env.reset()
     for _ in range(200):
-        action = np.random.uniform(-1, 1, 23)
-        obs, rew, done, trunc, info = env.step(action)
+        action = np.random.uniform(-1, 1, 7 + _N_ALLEGRO)
+        env.step(action)
     env.close()

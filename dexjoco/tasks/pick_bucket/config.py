@@ -1,6 +1,6 @@
 from typing import Literal
 
-from ...sim.envs.panda_pick_bucket_env import PandaPickBucketGymEnv
+from ...sim.envs.cr3_craft_pick_bucket_env import Cr3CraftPickBucketEnv
 from ..config import TaskConfigBase
 from ..obs_adapters import DexjocoObsAdapter
 from ..sim_teleop import SingleArmTeleopConfig
@@ -29,7 +29,7 @@ class TaskConfig(TaskConfigBase):
         hamer_config = kwargs.pop("hamer_config", None)
         hamer_config_path = kwargs.pop("hamer_config_path", None)
         hamer_overrides = kwargs.pop("hamer_overrides", None)
-        env = PandaPickBucketGymEnv(
+        env = Cr3CraftPickBucketEnv(
             render_mode=render_mode, randomize=randomize, hz=30, **kwargs
         )
         env = wrap_single_arm_teleop(

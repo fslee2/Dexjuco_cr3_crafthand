@@ -3,17 +3,18 @@
 from .cr3_craft_click_mouse_env import Cr3CraftClickMouseEnv
 from .cr3_craft_click_mouse_shell_env import Cr3CraftClickMouseShellEnv
 from .cr3_craft_reach_debug_env import Cr3CraftReachDebugEnv
-from .panda_hammer_nail_env import PandaHammerNailGymEnv
-from .panda_pick_bucket_env import PandaPickBucketGymEnv
-from .panda_pinch_tongs_env import PandaPinchTongsGymEnv
-from .panda_water_plant_env import PandaWaterPlantGymEnv
-from .panda_fold_glasses_env import PandaFoldGlassesGymEnv
+from .cr3_craft_hammer_nail_env import Cr3CraftHammerNailEnv
+from .cr3_craft_pick_bucket_env import Cr3CraftPickBucketEnv
+from .cr3_craft_pinch_tongs_env import Cr3CraftPinchTongsEnv
+from .cr3_craft_water_plant_env import Cr3CraftWaterPlantEnv
+from .cr3_craft_fold_glasses_env import Cr3CraftFoldGlassesEnv
 
-Cr3CraftHammerNailEnv = PandaHammerNailGymEnv
-Cr3CraftPickBucketEnv = PandaPickBucketGymEnv
-Cr3CraftPinchTongsEnv = PandaPinchTongsGymEnv
-Cr3CraftWaterPlantEnv = PandaWaterPlantGymEnv
-Cr3CraftFoldGlassesEnv = PandaFoldGlassesGymEnv
+# Legacy aliases kept for existing DexJoCo task configs and downstream scripts.
+PandaHammerNailGymEnv = Cr3CraftHammerNailEnv
+PandaPickBucketGymEnv = Cr3CraftPickBucketEnv
+PandaPinchTongsGymEnv = Cr3CraftPinchTongsEnv
+PandaWaterPlantGymEnv = Cr3CraftWaterPlantEnv
+PandaFoldGlassesGymEnv = Cr3CraftFoldGlassesEnv
 
 __all__ = [
     "Cr3CraftClickMouseEnv",

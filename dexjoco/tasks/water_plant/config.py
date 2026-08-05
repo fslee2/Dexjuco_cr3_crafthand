@@ -1,6 +1,6 @@
 from typing import Literal
 
-from ...sim.envs.panda_water_plant_env import PandaWaterPlantGymEnv
+from ...sim.envs.cr3_craft_water_plant_env import Cr3CraftWaterPlantEnv
 from ..config import TaskConfigBase
 from ..obs_adapters import DexjocoObsAdapter
 from ..sim_teleop import SingleArmTeleopConfig
@@ -31,7 +31,7 @@ class TaskConfig(TaskConfigBase):
         hamer_config = kwargs.pop("hamer_config", None)
         hamer_config_path = kwargs.pop("hamer_config_path", None)
         hamer_overrides = kwargs.pop("hamer_overrides", None)
-        env = PandaWaterPlantGymEnv(
+        env = Cr3CraftWaterPlantEnv(
             render_mode=render_mode,
             randomize=randomize,
             hz=30,
