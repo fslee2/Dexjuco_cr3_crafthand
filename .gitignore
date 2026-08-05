@@ -40,6 +40,7 @@ MUJOCO_LOG.TXT
 *.safetensors
 *.task
 !hand_landmarker.task
+!dexjoco/sim/envs/replay_cameras.npy
 *.pkl
 *.pickle
 *.npy

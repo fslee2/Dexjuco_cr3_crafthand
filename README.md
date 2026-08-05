@@ -116,7 +116,7 @@ Q / Esc       → quit
 
 This repository is self-contained for the CR3+CRAFT simulation and the lightweight MediaPipe/keyboard teleoperation paths. It includes the Python package, controllers, CR3 and CRAFT meshes, mouse/display assets, task XMLs, scripts, and setup files.
 
-The repository includes the lightweight MediaPipe `hand_landmarker.task` model, so a fresh clone has the runtime asset needed by the camera demo.
+The repository includes the lightweight MediaPipe `hand_landmarker.task` model, so a fresh clone has the runtime asset needed by the camera demo. It also includes five CR3+CRAFT manipulation tasks: hammer-and-nail, bucket picking, tongs, watering a plant, and folding glasses.
 
 On Windows, keep the clone path ASCII-only (for example `E:\\src\\Dexjuco_cr3_crafthand`). Some MuJoCo XML loading paths fail when the repository is nested under a directory containing Chinese characters.
 
@@ -128,6 +128,7 @@ On Windows, keep the clone path ASCII-only (for example `E:\\src\\Dexjuco_cr3_cr
 cd <CLONE_DIR>
 python scripts/smoke_cr3_craft_envs.py --env all --steps 2
 python scripts/smoke_cr3_craft_envs.py --env click_mouse_shell --steps 5 --render-check
+python scripts/smoke_cr3_craft_tasks.py
 ```
 
 ### Windows MediaPipe

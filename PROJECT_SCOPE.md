@@ -11,6 +11,8 @@ It is intentionally smaller than the full workspace.
 - Teleoperation scripts written for CR3+CRAFT testing.
 - Windows uv environment setup for MediaPipe-based validation.
 - The small MediaPipe hand landmark task model used by the included camera path.
+- Five CR3+CRAFT manipulation task environments: hammer/nail, bucket, tongs,
+  watering plant, and folding glasses.
 - Documentation and handoff reports.
 - Small rendered media assets for GitHub presentation.
 

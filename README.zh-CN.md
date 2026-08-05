@@ -95,6 +95,7 @@ tools/        展示媒体渲染工具
 ## 运行前提
 
 这个仓库已经包含 CR3+CRAFT 仿真所需的 Python 包、控制器、机械臂和手部网格、鼠标/显示器资源、任务 XML、脚本和安装配置，可以直接 clone 后使用。
+除点击鼠标场景外，还包含抓锤子敲钉子、抓水桶、使用夹子、浇花和折叠眼镜五个操作任务。
 
 仓库已经包含轻量级 MediaPipe `hand_landmarker.task` 模型，直接 clone 后即可运行摄像头方案。
 
@@ -104,6 +105,7 @@ Windows 下建议把仓库 clone 到只含 ASCII 字符的路径，例如 `E:\\s
 cd <CLONE_DIR>
 .\scripts\setup_windows_uv_mediapipe.ps1
 .\scripts\run_mediapipe_cr3_windows_uv.ps1 -CameraId 0
+python scripts/smoke_cr3_craft_tasks.py
 ```
 
 双摄像头运行：
