@@ -1,0 +1,35 @@
+hamer_root: null
+
+camera: video
+video_path: null
+device_index: 0
+width: 424
+height: 240
+fps: 30
+realsense_serial: null
+video_start_frame: 0
+max_frames: null
+
+bbox_source: mediapipe
+image_scale: 1.0
+score_thr: 0.5
+batch_size: 1
+selection: largest_area
+
+position_mode: cam_t
+orientation_mode: none
+pose_scale: [0.55, 0.85, 0.01]
+axes: [0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0]
+workspace_delta_low: [-0.12, -0.16, -0.12]
+workspace_delta_high: [0.12, 0.16, 0.12]
+filter_alpha: 0.25
+filter_max_step: 0.02
+
+craft_calibration_file: null
+craft_smoothing_alpha: 0.5
+
+visualize_joints: true
+auto_enable: false
+debug_log_interval: 30
+record_visuals: false
+inference_interval: 3

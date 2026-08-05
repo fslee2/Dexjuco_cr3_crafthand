@@ -1,7 +1,7 @@
 """Render small README media assets for the CR3+CRAFT showcase.
 
-This utility expects the full DexJoCo checkout passed with --source-repo and
-renders a short MuJoCo GIF from the CR3+CRAFT click_mouse shell environment.
+This utility renders a short MuJoCo GIF from the standalone CR3+CRAFT package.
+Use --source-repo only when rendering from another checkout.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--source-repo",
         type=Path,
-        default=Path(os.environ.get("DEXJOCO_ROOT", "")),
+        default=Path(os.environ.get("DEXJOCO_ROOT", Path(__file__).resolve().parents[1])),
     )
     parser.add_argument("--out-dir", type=Path, default=Path("assets/gifs"))
     parser.add_argument("--frames", type=int, default=90)

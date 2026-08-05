@@ -75,17 +75,19 @@ MediaPipe 脚本的主要流程是：
 
 双摄像头版本复用同一套手指映射和滤波逻辑，只把 TCP X 的输入换成侧面摄像头的手掌水平位移。
 
-## 5. MuJoCo XML 的依赖关系
+## 5. MuJoCo XML 的资源关系
 
-当前仓库中的 XML 是展示版场景文件，但其中部分 `<include>` 仍指向完整 DexJoCo 工程中的机器人网格和任务资源，例如：
+当前仓库已经把 CR3+CRAFT、鼠标、显示器、桌面纹理和支撑底座等运行所需资源放入 `dexjoco/sim/envs/xmls/`。主要资源包括：
 
 ```text
 cr3_craft/models/cr3_robot_hand_body.xml
 mouse_nolight.xml
 display.xml
+table_arena/
+rethink_mount/
 ```
 
-因此 clone 本仓库后，不能把 `src/xmls/` 当成完全自包含的资产包。正确的使用方式是将这些文件放回完整 DexJoCo 的相应资源目录，或在本地工程中配置等价的 XML/mesh 搜索路径。
+因此 clone 本仓库后，环境类会从包内相对路径加载 XML 和网格，不需要再把文件合并到其他 DexJoCo 工程。仓库刻意没有包含 Panda、OpenPI、GeoRT 和其他无关任务的模型资源。
 
 ## 6. 当前最重要的技术结论
 

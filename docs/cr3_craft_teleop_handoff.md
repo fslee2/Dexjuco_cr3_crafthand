@@ -15,7 +15,7 @@ However, for this project right now, WSL/Linux is the recommended primary runtim
 Reason:
 
 - Most repo commands, docs, paths, and virtualenv setup assume WSL:
-  - `<DEXJOCO_ROOT>`
+  - `<CLONE_DIR>`
   - `source ~/.venv-hamer/bin/activate`
   - `export PYTHONPATH=.../dexjoco`
 - Several scripts still default to `MUJOCO_GL=egl`, which is correct for WSL/Linux headless rendering but invalid on Windows MuJoCo in the tested conda env.
@@ -69,9 +69,9 @@ The macro conclusion remains:
 WSL/Linux:
 
 ```bash
-cd <DEXJOCO_ROOT>
+cd <CLONE_DIR>
 source ~/.venv-hamer/bin/activate
-export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
+export PYTHONPATH=<CLONE_DIR>/dexjoco
 export MUJOCO_GL=egl
 ```
 
@@ -498,7 +498,7 @@ side camera:  placed roughly 90 degrees to the side, so the user's forward/back
 Windows uv command:
 
 ```powershell
-cd <DEXJOCO_ROOT>
+cd <CLONE_DIR>
 .\scripts\run_dual_mediapipe_cr3_windows_uv.ps1 `
   -FrontCameraId 0 `
   -SideCameraId 1

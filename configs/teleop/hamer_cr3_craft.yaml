@@ -1,0 +1,37 @@
+# HaMeR teleoperation defaults for CR3 + CRAFT reach/debug tasks.
+
+hamer_root: null
+
+camera: video
+video_path: null
+device_index: 0
+width: 640
+height: 480
+fps: 30
+realsense_serial: null
+video_start_frame: 0
+max_frames: null
+
+bbox_source: mediapipe
+image_scale: 1.0
+score_thr: 0.5
+batch_size: 1
+selection: largest_area
+
+position_mode: cam_t
+orientation_mode: none
+pose_scale: [2.2, 3.5, 0.04]
+axes: [0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0]
+workspace_delta_low: [-0.55, -0.60, -0.55]
+workspace_delta_high: [0.55, 0.60, 0.55]
+filter_alpha: 0.35
+filter_max_step: 0.04
+
+craft_calibration_file: null
+craft_smoothing_alpha: 0.5
+
+visualize_joints: false
+auto_enable: false
+debug_log_interval: 0
+record_visuals: false
+inference_interval: 3

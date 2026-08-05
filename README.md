@@ -90,7 +90,7 @@ Q / Esc       → quit
 
 ### Quest / WebXR MVP
 
-`src/tasks/quest_teleop.py` provides a prototype bridge for Quest pose and button states. It handles quaternion conversion, relative-pose calibration, position smoothing, grip-to-hand mapping, and WebSocket state exchange. It should be treated as an experimental interface, not a production Quest controller.
+`dexjoco/tasks/quest_teleop.py` provides a prototype bridge for Quest pose and button states. It handles quaternion conversion, relative-pose calibration, position smoothing, grip-to-hand mapping, and WebSocket state exchange. It should be treated as an experimental interface, not a production Quest controller.
 
 ## Repository layout
 
@@ -98,13 +98,15 @@ Q / Esc       → quit
 .
 ├── assets/                         # Selected images and GIFs for documentation
 ├── docs/                           # Architecture, audits, handoff, and setup notes
-├── src/
-│   ├── envs/                       # CR3+CRAFT DexJoCo/Gym environments
-│   ├── scripts/                    # Keyboard, MediaPipe, dual-camera, and Quest entrypoints
-│   ├── tasks/                      # Quest state receiver and action mapping
-│   ├── tests/                      # Lightweight environment and mapping tests
-│   ├── xmls/                       # CR3+CRAFT MuJoCo scene definitions
-│   └── requirements-windows-mediapipe.txt
+├── dexjoco/                        # Standalone importable Python package
+│   ├── sim/envs/                   # CR3+CRAFT environments and MuJoCo XMLs
+│   ├── sim/controllers/             # Operational-space controller
+│   └── tasks/                      # Quest state receiver and action mapping
+├── scripts/                        # Keyboard, MediaPipe, dual-camera, and Quest entrypoints
+├── configs/                        # CR3+CRAFT teleoperation configurations
+├── tests/                          # Lightweight environment and mapping tests
+├── pyproject.toml                  # Installable package definition
+└── requirements-windows-mediapipe.txt
 ├── tools/                          # Showcase-media rendering utility
 ├── PROJECT_SCOPE.md                # Publishing boundary
 └── README.zh-CN.md                 # Chinese documentation
@@ -112,22 +114,18 @@ Q / Esc       → quit
 
 ## Runtime requirements
 
-This repository is not a fully standalone Python package. The environment code and XML files depend on the full DexJoCo project for base environment classes, controllers, robot meshes, and task assets.
+This repository is self-contained for the CR3+CRAFT simulation and the lightweight MediaPipe/keyboard teleoperation paths. It includes the Python package, controllers, CR3 and CRAFT meshes, mouse/display assets, task XMLs, scripts, and setup files.
 
-Before running, prepare the full DexJoCo/CRAFT project and make sure that:
+The repository includes the lightweight MediaPipe `hand_landmarker.task` model, so a fresh clone has the runtime asset needed by the camera demo.
 
-1. the curated `src/` files are merged or mapped into the main `dexjoco/` package;
-2. `cr3_craft/models/`, `mujoco_gym_env.py`, `controllers/opspace.py`, and task XML assets are available;
-3. `hand_landmarker.task` is available for the Windows MediaPipe pipeline.
-
-In the commands below, `<DEXJOCO_ROOT>` means the full DexJoCo project, not this showcase repository.
+On Windows, keep the clone path ASCII-only (for example `E:\\src\\Dexjuco_cr3_crafthand`). Some MuJoCo XML loading paths fail when the repository is nested under a directory containing Chinese characters.
 
 ## Quick validation
 
 ### Environment smoke tests
 
 ```powershell
-cd <DEXJOCO_ROOT>
+cd <CLONE_DIR>
 python scripts/smoke_cr3_craft_envs.py --env all --steps 2
 python scripts/smoke_cr3_craft_envs.py --env click_mouse_shell --steps 5 --render-check
 ```
@@ -135,7 +133,7 @@ python scripts/smoke_cr3_craft_envs.py --env click_mouse_shell --steps 5 --rende
 ### Windows MediaPipe
 
 ```powershell
-cd <DEXJOCO_ROOT>
+cd <CLONE_DIR>
 .\scripts\setup_windows_uv_mediapipe.ps1
 .\scripts\run_mediapipe_cr3_windows_uv.ps1 -CameraId 0
 ```

@@ -78,38 +78,30 @@ Q / Esc       → 退出
 
 ### Quest / WebXR
 
-`src/tasks/quest_teleop.py` 是 Quest 3 WebXR 桥接原型，负责位姿接收、四元数转换、相对运动、位置平滑、抓握映射和 WebSocket 通信。目前仍属于实验性接口。
+`dexjoco/tasks/quest_teleop.py` 是 Quest 3 WebXR 桥接原型，负责位姿接收、四元数转换、相对运动、位置平滑、抓握映射和 WebSocket 通信。目前仍属于实验性接口。
 
 ## 仓库结构
 
 ```text
 assets/       展示图片和 GIF
 docs/         架构、审计、交接和环境说明
-src/envs/     CR3+CRAFT 环境类
-src/scripts/  键盘、MediaPipe、双摄像头和 Quest 入口
-src/tasks/    Quest 状态接收和动作映射
-src/tests/    轻量测试
-src/xmls/     MuJoCo 场景定义
+dexjoco/      可直接导入的 Python 包、控制器、环境和 MuJoCo 资源
+scripts/      键盘、MediaPipe、双摄像头和 Quest 入口
+configs/      CR3+CRAFT 遥操作配置
+tests/        轻量测试
 tools/        展示媒体渲染工具
 ```
 
 ## 运行前提
 
-这是一个展示版/交接版，不是完全独立的 Python 包。环境类和 XML 依赖完整 DexJoCo 工程中的基础环境、控制器、机器人网格和任务资源。
+这个仓库已经包含 CR3+CRAFT 仿真所需的 Python 包、控制器、机械臂和手部网格、鼠标/显示器资源、任务 XML、脚本和安装配置，可以直接 clone 后使用。
 
-需要准备：
+仓库已经包含轻量级 MediaPipe `hand_landmarker.task` 模型，直接 clone 后即可运行摄像头方案。
 
-1. 完整 DexJoCo/CRAFT 主工程；
-2. 将本仓库的 `src/` 内容合并或映射到主工程的 `dexjoco/` 包；
-3. 准备 `cr3_craft/models/`、`mujoco_gym_env.py`、`controllers/opspace.py` 和任务 XML；
-4. MediaPipe Windows 方案额外准备 `hand_landmarker.task`。
-
-命令中的 `<DEXJOCO_ROOT>` 指完整 DexJoCo 主工程，不是本仓库目录。
+Windows 下建议把仓库 clone 到只含 ASCII 字符的路径，例如 `E:\\src\\Dexjuco_cr3_crafthand`。MuJoCo 在包含中文目录的路径下加载 XML 资源时可能失败。
 
 ```powershell
-cd <DEXJOCO_ROOT>
-python scripts/smoke_cr3_craft_envs.py --env all --steps 2
-python scripts/smoke_cr3_craft_envs.py --env click_mouse_shell --steps 5 --render-check
+cd <CLONE_DIR>
 .\scripts\setup_windows_uv_mediapipe.ps1
 .\scripts\run_mediapipe_cr3_windows_uv.ps1 -CameraId 0
 ```

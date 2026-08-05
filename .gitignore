@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 .venv*/
+.dexjoco-build/
+dexjoco/dexjoco/
 venv/
 env/
 .env
@@ -37,6 +39,7 @@ MUJOCO_LOG.TXT
 *.bin
 *.safetensors
 *.task
+!hand_landmarker.task
 *.pkl
 *.pickle
 *.npy
@@ -58,6 +61,9 @@ MUJOCO_LOG.TXT
 *.igs
 *.3mf
 *.stl
+!dexjoco/sim/envs/xmls/cr3_craft/models/meshes/**/*.stl
+!dexjoco/sim/envs/xmls/cr3_craft/models/meshes/**/*.STL
+!dexjoco/sim/envs/xmls/rethink_mount/pedestal.stl
 *.blend
 
 # Local tools and editor metadata

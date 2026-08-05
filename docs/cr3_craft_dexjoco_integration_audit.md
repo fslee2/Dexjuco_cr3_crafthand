@@ -170,9 +170,9 @@ obs = {
 **命令**:
 
 ```bash
-cd <DEXJOCO_ROOT>
+cd <CLONE_DIR>
 source ~/.venv-hamer/bin/activate
-export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
+export PYTHONPATH=<CLONE_DIR>/dexjoco
 export MUJOCO_GL=egl
 python -c '...'  # 完整脚本见审计说明
 ```

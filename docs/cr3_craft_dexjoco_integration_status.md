@@ -9,8 +9,8 @@
 
 ```bash
 # Prerequisites: activated venv with dexjoco installed
-cd <DEXJOCO_ROOT>
-export PYTHONPATH=<DEXJOCO_ROOT>/dexjoco
+cd <CLONE_DIR>
+export PYTHONPATH=<CLONE_DIR>/dexjoco
 export MUJOCO_GL=egl
 
 # Smoke test all CR3+CRAFT envs (no camera, no HaMeR, no display needed)
