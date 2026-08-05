@@ -1,143 +1,130 @@
 # CR3 × CRAFT Teleoperation Showcase
 
-CR3 六轴机械臂与 CRAFT 灵巧手在 DexJoCo/MuJoCo 中的集成、任务环境和遥操作验证仓库。
+[English](README.md) · [中文版](README.zh-CN.md)
 
-> 本仓库是从完整实验工作区整理出的 **可读展示版 / 交接版**。它保存了 CR3+CRAFT 的环境适配、MuJoCo 场景、遥操作脚本、测试和实验文档；完整的 DexJoCo 主工程、第三方模型权重、CAD 文件和本地运行环境不包含在这里。
+CR3 six-axis robot arm and CRAFT dexterous hand integration, task environments, and teleoperation experiments in DexJoCo/MuJoCo.
 
-[![GitHub](https://img.shields.io/badge/GitHub-fslee2%2Fcr3--craft--teleop--showcase-181717?logo=github)](https://github.com/fslee2/cr3-craft-teleop-showcase)
-[![Simulation](https://img.shields.io/badge/Simulation-MuJoCo%20%2F%20DexJoCo-1f6feb)](#项目定位)
-[![Input](https://img.shields.io/badge/Teleoperation-MediaPipe%20%2B%20Dual--Camera-2ea44f)](#遥操作链路)
+> This repository is a curated showcase and handoff package extracted from a larger research workspace. It contains the CR3+CRAFT integration layer, MuJoCo scenes, teleoperation scripts, tests, documentation, and selected media. The full DexJoCo base project, third-party model weights, CAD files, and local environments are intentionally excluded.
+
+[![GitHub](https://img.shields.io/badge/GitHub-fslee2%2FDexjuco__cr3__crafthand-181717?logo=github)](https://github.com/fslee2/Dexjuco_cr3_crafthand)
+[![Simulation](https://img.shields.io/badge/Simulation-MuJoCo%20%2F%20DexJoCo-1f6feb)](#project-scope)
+[![Teleoperation](https://img.shields.io/badge/Teleoperation-MediaPipe%20%2B%20Dual--Camera-2ea44f)](#teleoperation-pipelines)
 
 ![CR3 + CRAFT camera grid](assets/images/cr3_craft_camera_grid.png)
 
-![CR3 + CRAFT x-axis teleoperation](assets/gifs/cr3_craft_x_axis_teleop.gif)
+![CR3 + CRAFT teleoperation](assets/gifs/cr3_craft_x_axis_teleop.gif)
 
-## 项目定位
+## Project scope
 
-这个项目解决的是一个具体的系统集成问题：把原本面向 Panda/Allegro 类机器人的 DexJoCo 任务，替换成 CR3 机械臂和 CRAFT 灵巧手，并让不同的人类输入方式都能够转换成同一套机器人动作接口。
+The project addresses a concrete integration problem: replacing a Panda/Allegro-style robot setup in DexJoCo with a CR3 arm and a CRAFT dexterous hand, while allowing different human-input devices to drive the same robot action interface.
 
-它不是单独的机械臂模型，也不是完整的真实硬件控制程序，而是连接以下几层的仿真与遥操作验证平台：
-
-```text
-MediaPipe / 键盘 / 双摄像头 / Quest WebXR
-                    ↓
-       末端位姿 + CRAFT 手指动作
-                    ↓
-             统一 22D action
-                    ↓
-       CR3 + CRAFT DexJoCo 环境
-                    ↓
-       MuJoCo 物理仿真与任务反馈
-```
-
-## 核心接口
-
-### 22 维动作接口
-
-所有环境共享同一套动作布局：
+It is a research-oriented simulation and teleoperation platform, not a standalone hardware controller or a polished product. The system connects:
 
 ```text
-action[0:3]   = target_xyz        # 机械臂末端目标位置
-action[3:7]   = target_quat_wxyz  # 末端目标姿态，四元数顺序为 wxyz
-action[7:22]  = craft15           # CRAFT 五指的 15 个直接控制量
+MediaPipe / keyboard / dual cameras / Quest WebXR
+                         ↓
+             end-effector pose + hand commands
+                         ↓
+                    unified 22D action
+                         ↓
+                  CR3 + CRAFT environment
+                         ↓
+                 MuJoCo physics and task feedback
 ```
 
-`craft15` 并不是 20 个手部自由度的全部关节，而是每根手指的 3 个主要输入；远端 DIP 关节通过 MuJoCo equality 约束与 PIP 关节耦合。因此，外部遥操作器只需要输出 15 个手指控制量，环境内部负责展开到 CRAFT 的完整关节/执行器。
+## Action and observation interfaces
 
-### 观测接口
-
-环境提供 DexJoCo 风格的字典观测，核心内容包括：
+All three environments share the following 22-dimensional action layout:
 
 ```text
-observation["state"]["tcp_pose"]         # 当前末端位置 + wxyz 姿态
-observation["state"]["arm_qpos"]         # CR3 六个关节角
-observation["state"]["craft_qpos"]       # CRAFT 手部关节状态
-observation["state"]["target_tcp_pose"]  # 当前目标末端位姿
-observation["images"]["front"]           # 前视角图像
+action[0:3]   = target_xyz        # target end-effector position
+action[3:7]   = target_quat_wxyz  # target orientation, scalar-first
+action[7:22]  = craft15           # 15 direct CRAFT finger commands
 ```
 
-## 三个仿真环境
+The 15 hand commands are the main control inputs for five fingers. The distal joints are coupled to the proximal joints through MuJoCo equality constraints, so the external command is 15D while the internal CRAFT state contains 20 joints.
 
-| 环境 | 用途 | 特点 |
+The observation dictionary exposes the current TCP pose, CR3 joint positions, CRAFT joint positions, target TCP pose, and a front-view image.
+
+## Environments
+
+| Environment | Purpose | Status |
 | --- | --- | --- |
-| `Cr3CraftReachDebugEnv` | 最小化调试 | 用于验证 CR3 末端 IK、位置伺服和 CRAFT 手指响应 |
-| `Cr3CraftClickMouseEnv` | 独立点击任务 | 自带桌面、鼠标、鼠标垫和显示器，结构简单，适合快速调试 |
-| `Cr3CraftClickMouseShellEnv` | 主线任务环境 | 保留 DexJoCo/Panda arena 的桌面、纹理、显示器和任务逻辑，只替换机器人为 CR3+CRAFT |
+| `Cr3CraftReachDebugEnv` | Minimal reach and controller debugging | Fastest environment for IK, TCP, and hand checks |
+| `Cr3CraftClickMouseEnv` | Standalone click-mouse task | Simplified scene for task development |
+| `Cr3CraftClickMouseShellEnv` | Main task environment | Preserves the DexJoCo/Panda arena while replacing the robot with CR3+CRAFT |
 
-推荐后续实验优先使用 `Cr3CraftClickMouseShellEnv`。它最接近完整任务场景，并且同时包含：鼠标位置随机化、鼠标垫约束、点击检测、显示器反馈和成功计数。
+`Cr3CraftClickMouseShellEnv` is the recommended mainline environment. It includes mouse and mousepad randomization, click detection, display feedback, and success counting.
 
-## 遥操作链路
+## Teleoperation pipelines
 
-### 1. MediaPipe 单摄像头
+### MediaPipe single-camera teleoperation
 
-当前最轻量、最容易在 Windows 上运行的方案：
+- Palm motion controls TCP Y/Z.
+- Finger curl controls the 15 CRAFT hand commands.
+- Keyboard input compensates for the difficult forward/backward TCP X direction.
+- Calibration, filtering, deadbands, and maximum-step limits are included.
 
-- 手掌左右/上下移动映射到 TCP 的 Y/Z；
-- 手指弯曲映射到 CRAFT 15 维手指控制；
-- 键盘补偿单目摄像头不容易获得的 TCP X 深度；
-- 支持重新校准、滤波、死区和最大步长限制。
+This is a lightweight, runnable prototype rather than full 3D hand reconstruction. Monocular depth is its main limitation.
 
-这是一条“可运行的实用原型”，不是严格的三维手部重建。单摄像头对前后深度的估计是它的主要限制。
-
-### 2. 双摄像头 MediaPipe
-
-双摄像头脚本把深度问题拆开：
+### Dual-camera MediaPipe prototype
 
 ```text
-正面摄像头 → TCP Y/Z + CRAFT 手指
-侧面摄像头 → TCP X
+Front camera → TCP Y/Z + CRAFT fingers
+Side camera  → TCP X
 ```
 
-它不是经过标定的双目视觉重建，而是两个视角的工程化 2D 映射，适合快速验证遥操作可行性。
+This is a pragmatic two-view 2D mapping, not calibrated stereo reconstruction.
 
-### 3. 键盘控制
+### Keyboard control
 
-键盘脚本用于不接摄像头时调试环境和任务逻辑：
+Keyboard control is useful for environment and task debugging:
 
 ```text
 Z / Numpad 7  → TCP X-
 X / Numpad 9  → TCP X+
-H / Numpad 5  → 清除 X 偏移
-R             → 重新校准
-Q / Esc       → 退出
+H / Numpad 5  → clear X offset
+R             → recalibrate
+Q / Esc       → quit
 ```
 
-### 4. Quest / WebXR
+### Quest / WebXR MVP
 
-`src/tasks/quest_teleop.py` 是 Quest 3 WebXR 的 MVP 桥接层，负责接收 Quest 位姿、处理四元数转换、计算相对运动、平滑位置、映射抓握量，并通过 WebSocket 与仿真循环交换状态。这部分目前应视为接口原型，不能描述成已经完成的 Quest 产品级控制系统。
+`src/tasks/quest_teleop.py` provides a prototype bridge for Quest pose and button states. It handles quaternion conversion, relative-pose calibration, position smoothing, grip-to-hand mapping, and WebSocket state exchange. It should be treated as an experimental interface, not a production Quest controller.
 
-## 仓库结构
+## Repository layout
 
 ```text
 .
-├── assets/                         # README 展示用图片和 GIF
-├── docs/                           # 集成审计、运行交接和硬件输入说明
+├── assets/                         # Selected images and GIFs for documentation
+├── docs/                           # Architecture, audits, handoff, and setup notes
 ├── src/
-│   ├── envs/                       # CR3+CRAFT Gym/DexJoCo 环境类
-│   ├── scripts/                    # 键盘、MediaPipe、双摄像头、Quest 入口
-│   ├── tasks/                      # Quest 状态接收和动作映射
-│   ├── tests/                      # 环境与 Quest 映射的轻量测试
-│   ├── xmls/                       # CR3+CRAFT MuJoCo 场景定义
+│   ├── envs/                       # CR3+CRAFT DexJoCo/Gym environments
+│   ├── scripts/                    # Keyboard, MediaPipe, dual-camera, and Quest entrypoints
+│   ├── tasks/                      # Quest state receiver and action mapping
+│   ├── tests/                      # Lightweight environment and mapping tests
+│   ├── xmls/                       # CR3+CRAFT MuJoCo scene definitions
 │   └── requirements-windows-mediapipe.txt
-├── tools/                          # 渲染展示媒体的辅助脚本
-├── PROJECT_SCOPE.md                # 发布边界和未包含内容
-└── README.md                       # 项目总览和运行入口
+├── tools/                          # Showcase-media rendering utility
+├── PROJECT_SCOPE.md                # Publishing boundary
+└── README.zh-CN.md                 # Chinese documentation
 ```
 
-## 运行前提
+## Runtime requirements
 
-这个展示仓库不是完全独立的 Python 包。环境类中的相对导入和 MuJoCo XML include 仍依赖完整 DexJoCo 主工程中的基础类、控制器、机器人网格和任务资源。因此运行前需要：
+This repository is not a fully standalone Python package. The environment code and XML files depend on the full DexJoCo project for base environment classes, controllers, robot meshes, and task assets.
 
-1. 准备完整的 DexJoCo/CRAFT 主工程；
-2. 将本仓库中的对应 `src/` 内容合并或映射到主工程的 `dexjoco/` 包中；
-3. 确保 `cr3_craft/models/`、基础 `mujoco_gym_env.py`、`controllers/opspace.py` 以及任务 XML 资源可被找到；
-4. Windows MediaPipe 方案额外准备 `hand_landmarker.task`。
+Before running, prepare the full DexJoCo/CRAFT project and make sure that:
 
-下面命令中的 `<DEXJOCO_ROOT>` 代表完整 DexJoCo 主工程目录，不是本展示仓库的目录。
+1. the curated `src/` files are merged or mapped into the main `dexjoco/` package;
+2. `cr3_craft/models/`, `mujoco_gym_env.py`, `controllers/opspace.py`, and task XML assets are available;
+3. `hand_landmarker.task` is available for the Windows MediaPipe pipeline.
 
-## 快速验证
+In the commands below, `<DEXJOCO_ROOT>` means the full DexJoCo project, not this showcase repository.
 
-### 环境冒烟测试
+## Quick validation
+
+### Environment smoke tests
 
 ```powershell
 cd <DEXJOCO_ROOT>
@@ -145,7 +132,7 @@ python scripts/smoke_cr3_craft_envs.py --env all --steps 2
 python scripts/smoke_cr3_craft_envs.py --env click_mouse_shell --steps 5 --render-check
 ```
 
-### Windows MediaPipe 单摄像头
+### Windows MediaPipe
 
 ```powershell
 cd <DEXJOCO_ROOT>
@@ -153,17 +140,7 @@ cd <DEXJOCO_ROOT>
 .\scripts\run_mediapipe_cr3_windows_uv.ps1 -CameraId 0
 ```
 
-等价的 Python 入口：
-
-```powershell
-.\.venv-mediapipe-win\Scripts\python.exe scripts\mediapipe_cr3_craft_click_mouse_shell.py `
-  --camera-id 0 `
-  --viewer `
-  --preview `
-  --keyboard-x-step 0.01
-```
-
-### 双摄像头原型
+### Dual-camera prototype
 
 ```powershell
 .\scripts\run_dual_mediapipe_cr3_windows_uv.ps1 `
@@ -171,52 +148,48 @@ cd <DEXJOCO_ROOT>
   -SideCameraId 1
 ```
 
-如果侧面摄像头的 X 方向相反：
+Use `-SideXSign -1` if the side-camera X direction is reversed.
 
-```powershell
-.\scripts\run_dual_mediapipe_cr3_windows_uv.ps1 -SideXSign -1
-```
+## Completion status
 
-## 完成度与边界
+### Implemented or substantially complete
 
-### 已完成或基本完成
+- CR3 and CRAFT MuJoCo integration scenes;
+- three CR3+CRAFT environment classes;
+- unified 22D action and standard environment lifecycle;
+- CRAFT distal-joint coupling and actuator control;
+- click-mouse task adaptation and shell environment;
+- keyboard, MediaPipe, and dual-camera teleoperation entrypoints;
+- Quest/WebXR state and action-mapping prototype;
+- smoke tests, handoff notes, and selected showcase media.
 
-- CR3 六轴机械臂与 CRAFT 手部 MuJoCo 资产的组合场景；
-- 三个 CR3+CRAFT 环境类；
-- 统一 22D action 和标准 `reset / step / render / close` 接口；
-- CRAFT 远端关节耦合和执行器控制；
-- click-mouse 任务逻辑及 Shell 场景适配；
-- MediaPipe、键盘和双摄像头遥操作入口；
-- Quest/WebXR 的状态和动作映射原型；
-- 冒烟测试、交接文档和展示媒体。
+### Experimental or still in progress
 
-### 仍属于实验阶段
+- hand-to-robot calibration and teleoperation naturalness;
+- monocular depth and dual-camera X mapping;
+- real Quest browser, TLS, and network deployment;
+- full HaMeR/MobileHand integration;
+- real CR3+CRAFT hardware closed-loop control and Sim2Real safety validation;
+- large-scale data collection and policy evaluation.
 
-- MediaPipe 手到机器人坐标的标定与自然度；
-- 单目深度和双摄像头 X 方向映射；
-- Quest 真实浏览器连接、TLS 和网络部署；
-- HaMeR/MobileHand 等重型视觉模型的完整接入；
-- 真实 CR3 + CRAFT 硬件闭环和 Sim2Real 安全验证；
-- 面向策略训练的数据采集、评估和大规模复现实验。
+## Excluded from this repository
 
-## 不包含的内容
+- Full third-party DexJoCo, HaMeR, or MobileHand checkouts;
+- model weights, caches, local virtual environments, and serialized datasets;
+- SolidWorks/CAD and 3D-print source files;
+- Quest Developer Hub installers;
+- paper raw data, training logs, and large experiment outputs.
 
-- 第三方 DexJoCo、HaMeR、MobileHand 完整仓库；
-- 模型权重、缓存和本地虚拟环境；
-- SolidWorks/CAD 与 3D 打印源文件；
-- Quest Developer Hub 等安装程序；
-- 论文原始数据、训练日志和大体积实验产物。
+## Documentation
 
-## 文档导航
-
-- [架构与代码导览](docs/architecture_guide.md)
-- [DexJoCo 集成状态](docs/cr3_craft_dexjoco_integration_status.md)
-- [集成审计报告](docs/cr3_craft_dexjoco_integration_audit.md)
-- [遥操作交接记录](docs/cr3_craft_teleop_handoff.md)
+- [Architecture and code guide](docs/architecture_guide.md)
+- [DexJoCo integration status](docs/cr3_craft_dexjoco_integration_status.md)
+- [Integration audit](docs/cr3_craft_dexjoco_integration_audit.md)
+- [Teleoperation handoff](docs/cr3_craft_teleop_handoff.md)
 - [Windows + uv + MediaPipe](docs/windows_uv_mediapipe_env.md)
 - [Quest 3 WebXR MVP](docs/quest3_teleop_mvp.md)
-- [发布边界](PROJECT_SCOPE.md)
+- [Publishing scope](PROJECT_SCOPE.md)
 
-## 一句话总结
+## One-sentence summary
 
-这是一个把 **CR3 机械臂、CRAFT 灵巧手、MuJoCo 任务环境和多种人类输入方式** 接起来的研究型仿真与遥操作平台；环境接口已经建立，遥操作质量和真实硬件闭环是下一阶段重点。
+This repository connects a CR3 arm, a CRAFT dexterous hand, MuJoCo task environments, and multiple human-input pipelines into a research-oriented simulation and teleoperation platform.
